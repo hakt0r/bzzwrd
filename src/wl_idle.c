@@ -1,5 +1,8 @@
 #include "wayland.h"
 
+struct wlContext wlContext = {0};
+
+
 void wlIdleInhibit(struct wlContext *ctx, bool on)
 {
 	logDbg("Got idle inhibit request: %s", on ? "on" : "off");

@@ -8,6 +8,7 @@
 #include "os.h"
 #include "xmem.h"
 #include "config.h"
+#include "log.h"
 #include <unistd.h>
 #include <wayland-client.h>
 #include <wayland-client-protocol.h>
@@ -17,9 +18,6 @@
 #include "xdg-output-unstable-v1-client-protocol.h"
 #include "idle-client-protocol.h"
 #include "ext-idle-notify-v1-client-protocol.h"
-#include "uSynergy.h"
-
-
 
 struct wlOutput
 {
@@ -135,9 +133,10 @@ extern void wlDisplayFlush(struct wlContext *ctx);
 extern int wlKeySetConfigLayout(struct wlContext *ctx);
 /* load button map */
 extern void wlLoadButtonMap(struct wlContext *ctx);
+/* wayland context */
+struct wlContext *wl_ctx;
 /* set up the wayland context */
 extern bool wlSetup(struct wlContext *context, int width, int height, char *backend);
-
 /* obtain a monotonic timestamp */
 extern uint32_t wlTS(struct wlContext *context);
 /* update screen resolution */

@@ -1,4 +1,5 @@
 #include <sys/wait.h>
+#include <signal.h>
 #include "sig.h"
 #include "clip.h"
 #include "wayland.h"
@@ -10,20 +11,10 @@
 volatile sig_atomic_t sigDoExit = 0;
 volatile sig_atomic_t sigDoRestart = 0;
 extern struct wlContext wlContext;
-extern uSynergyContext synContext;
-extern struct synNetContext synNetContext;
 
 static char **argv_reexec;
 static void cleanup(enum sigExitStatus status)
 {
-	/* stop clipboard monitors */
-	for (int i = 0; i < 2; ++i) {
-		if (clipMonitorPid[i] != -1) {
-			kill(clipMonitorPid[i], SIGTERM);
-		}
-	}
-	/*close stuff*/
-	synNetDisconnect(&synNetContext);
 	if (status != SES_ERROR_WL) {
 		/* this stuff will crash and burn if we are exiting because of
 		 * a wayland error */
@@ -31,7 +22,6 @@ static void cleanup(enum sigExitStatus status)
 		wlClose(&wlContext);
 	}
 	logClose();
-	/*unmask any caught signals*/
 }
 
 void Exit(enum sigExitStatus status)

@@ -1,0 +1,5 @@
+{
+  "name": "waynergy",
+  "module": "index.js",
+  "type": "module"
+}

@@ -1,6 +1,9 @@
 #include "wayland.h"
+#include "log.h"
 #include <signal.h>
 #include <spawn.h>
+#include <unistd.h>
+#include <stdlib.h>
 
 static void inhibit_stop(struct wlIdle *idle)
 {

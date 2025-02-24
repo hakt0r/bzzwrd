@@ -5,13 +5,10 @@
 #include <sys/wait.h>
 #include "wayland.h"
 #include "log.h"
-#include "net.h"
-
 
 enum sigExitStatus {
 	SES_SUCCESS = EXIT_SUCCESS, /* everything normal */
 	SES_FAILURE = EXIT_FAILURE, /* general failure */
-	SES_ERROR_SYN, 	 /* synergy protocol error */
 	SES_ERROR_WL, 	 /* wayland error. DO NOT attempt cleanup functions related to wayland. */
 };
 
