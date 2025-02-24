@@ -1,5 +1,24 @@
 {
-  "name": "waynergy",
+  "name": "bzzwrd",
   "module": "index.js",
-  "type": "module"
+  "type": "module",
+  "license": "MIT",
+  "author": {
+    "name": "Sebastian Glaser",
+    "email": "anx+bzzwrd-oss@hktr.de"
+  },
+  "description": "a synergy inspired remote control tool",
+  "keywords": ["wayland", "bun", "remote", "control", "tool"],
+  "homepage": "https://github.com/bzzwrd/bzzwrd",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bzzwrd/bzzwrd.git"
+  },
+  "scripts": {
+    "dev": "bun run --watch index.js",
+    "build": "bun build index.js --outfile index.js"
+  },
+  "dependencies": {
+    "bun": "latest"
+  }
 }

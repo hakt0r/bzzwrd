@@ -1,8 +1,8 @@
 [Desktop Entry]
-Comment=A Barrier/Synergy client for Wayland compositors
-Exec=/usr/bin/waynergy
+Comment=Synergy inspire remote control
+Exec=/usr/bin/bzz
 Icon=system-run
-Name=Waynergy
+Name=Bzzwrd
 StartupNotify=true
 Terminal=true
 TerminalOptions=\s--noclose
