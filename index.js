@@ -69,6 +69,46 @@ const { symbols } = cc({
     wlDisplayFlush: {
       args: ["ptr"],
       returns: "void"
+    },
+    clipHaveWlClipboard: {
+      args: [],
+      returns: "bool"
+    },
+    clipWlCopy: {
+      args: ["i32", "ptr", "u64"],
+      returns: "bool"
+    },
+    wlMouseMotion: {
+      args: ["ptr", "i32", "i32"],
+      returns: "void"
+    },
+    wlMouseRelativeMotion: {
+      args: ["ptr", "i32", "i32"],
+      returns: "void"
+    },
+    wlMouseButton: {
+      args: ["ptr", "i32", "i32"],
+      returns: "void"
+    },
+    wlMouseWheel: {
+      args: ["ptr", "i16", "i16"],
+      returns: "void"
+    },
+    wlKeyRaw: {
+      args: ["ptr", "i32", "i32"],
+      returns: "void"
+    },
+    wlKey: {
+      args: ["ptr", "i32", "i32", "i32"],
+      returns: "void"
+    },
+    wlKeyReleaseAll: {
+      args: ["ptr"],
+      returns: "void"
+    },
+    wlIdleInhibit: {
+      args: ["ptr", "bool"],
+      returns: "void"
     }
   }
 });
@@ -79,5 +119,15 @@ export const {
   wlSetup,
   wlClose,
   wlPrepareFd,
-  wlDisplayFlush
+  wlDisplayFlush,
+  clipHaveWlClipboard,
+  clipWlCopy,
+  wlMouseMotion,
+  wlMouseRelativeMotion,
+  wlMouseButton,
+  wlMouseWheel,
+  wlKeyRaw,
+  wlKey,
+  wlKeyReleaseAll,
+  wlIdleInhibit
 } = symbols;
