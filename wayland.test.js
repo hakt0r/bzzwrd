@@ -1,5 +1,7 @@
 import { expect, test, describe } from "bun:test";
 import {
+  wlContextNew,
+  wlContextFree,
   wlSetup,
   wlClose,
   wlPrepareFd,
@@ -8,25 +10,23 @@ import {
 
 describe("wayland FFI", () => {
   test("can initialize wayland context", () => {
-    const ctx = {};
-    console.log('ctx', ctx);
+    const ctx = wlContextNew();
     expect(wlSetup(ctx, 1920, 1080, null)).toBe(true);
-    console.log('ctx', ctx);
-    wlClose(ctx);
+    wlContextFree(ctx);
   });
 
   test("can get wayland fd", () => {
-    const ctx = {};
+    const ctx = wlContextNew();
     wlSetup(ctx, 1920, 1080, null);
     const fd = wlPrepareFd(ctx);
     expect(fd).toBeGreaterThan(0);
-    wlClose(ctx);
+    wlContextFree(ctx);
   });
 
   test("can flush display", () => {
-    const ctx = {};
+    const ctx = wlContextNew();
     wlSetup(ctx, 1920, 1080, null);
     expect(() => wlDisplayFlush(ctx)).not.toThrow();
-    wlClose(ctx);
+    wlContextFree(ctx);
   });
 });

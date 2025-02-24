@@ -49,18 +49,18 @@ bool clipWlCopy(int id, const unsigned char *data, size_t len)
 {
 	pid_t pid;
 	posix_spawn_file_actions_t fa;
-	char *argv_0[] = {
+	char *argv_regular[] = {
 			"wl-copy",
 			"-f",
 			NULL};
 
-	char *argv_1[] = {
+	char *argv_primary[] = {
 			"wl-copy",
 			"-f",
 			"--primary",
 			NULL
 		};
-	char **argv[] = {argv_0, argv_1};
+	char **argv[] = {argv_regular, argv_primary};
 	/* create the pipe we will use to communicate with it */
 	int fd[2];
 	errno = 0;

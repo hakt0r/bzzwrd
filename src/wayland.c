@@ -622,3 +622,16 @@ void wlPollProc(struct wlContext *ctx, short revents)
 		Exit(SES_ERROR_WL);
 	}
 }
+
+struct wlContext *wlContextNew(void)
+{
+	struct wlContext *ctx = xcalloc(1, sizeof(*ctx));
+	return ctx;
+}
+
+void wlContextFree(struct wlContext *ctx)
+{
+	if (!ctx) return;
+	wlClose(ctx);
+	free(ctx);
+}

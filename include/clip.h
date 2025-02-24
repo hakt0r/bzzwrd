@@ -16,6 +16,10 @@
 #include <spawn.h>
 #include "log.h"
 
+/* Clipboard IDs */
+#define CLIP_REGULAR 0
+#define CLIP_PRIMARY 1
+
 /* check if wl-clipboard is even present */
 bool clipHaveWlClipboard(void);
 

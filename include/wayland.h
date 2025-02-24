@@ -125,6 +125,11 @@ struct wlContext {
 	void (*on_output_update)(struct wlContext *ctx);
 };
 
+/* Create a new wayland context */
+extern struct wlContext *wlContextNew(void);
+/* Free a wayland context */
+extern void wlContextFree(struct wlContext *ctx);
+
 /* flush the display with proper error checking */
 extern void wlDisplayFlush(struct wlContext *ctx);
 
@@ -133,10 +138,9 @@ extern void wlDisplayFlush(struct wlContext *ctx);
 extern int wlKeySetConfigLayout(struct wlContext *ctx);
 /* load button map */
 extern void wlLoadButtonMap(struct wlContext *ctx);
-/* wayland context */
-struct wlContext *wl_ctx;
 /* set up the wayland context */
 extern bool wlSetup(struct wlContext *context, int width, int height, char *backend);
+
 /* obtain a monotonic timestamp */
 extern uint32_t wlTS(struct wlContext *context);
 /* update screen resolution */

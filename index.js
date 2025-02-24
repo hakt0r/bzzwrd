@@ -46,6 +46,14 @@ const { symbols } = cc({
     "wlroots-0.18"
   ],
   symbols: {
+    wlContextNew: {
+      args: [],
+      returns: "ptr"
+    },
+    wlContextFree: {
+      args: ["ptr"],
+      returns: "void"
+    },
     wlSetup: {
       args: ["ptr", "i32", "i32", "ptr"],
       returns: "bool"
@@ -66,6 +74,8 @@ const { symbols } = cc({
 });
 
 export const {
+  wlContextNew,
+  wlContextFree,
   wlSetup,
   wlClose,
   wlPrepareFd,
