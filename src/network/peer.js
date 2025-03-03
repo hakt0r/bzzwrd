@@ -1,5 +1,7 @@
 import { randomBytes, createCipheriv, createDecipheriv } from "node:crypto";
 import { red, green, cyan, gray, yellow, reset, error, success, info, warning, sparkles, skull, handshake, wave, token, mouse } from '../colors.js';
+import { createDisplayServer } from '../display/index.js';
+import { cc } from "bun:ffi";
 
 const DEFAULT_PORT = 12345;
 const ALGORITHM = 'aes-256-gcm';
@@ -18,7 +20,8 @@ export class Peer {
     this.id = randomBytes(16).toString('hex');
     this.key = SHARED_KEY; // Use shared key for testing
     this.authToken = options.authToken; // Store auth token if provided
-    this.virtualMouse = null; // Will be initialized if needed
+    this.displayServer = null; // Will be initialized on demand
+    this.displayContext = null;
     this.mouseLocked = false;
 
     if (process.env.DEBUG) {
@@ -99,39 +102,113 @@ export class Peer {
       this.on("mouse_move", async (data, info) => {
         const peerKey = `${info.address}:${info.port}`;
         if (this.authenticatedPeers.has(peerKey)) {
-          if (!this.virtualMouse) {
-            const { VirtualMouse } = await import("../virtual.js");
-            this.virtualMouse = new VirtualMouse();
-            await this.virtualMouse.init();
-          }
-          console.debug(`${info} Moving mouse: dx=${cyan}${data.dx}${reset}, dy=${cyan}${data.dy}${reset}`);
-          await this.virtualMouse.moveRelative(data.dx, data.dy);
+          await this.ensureDisplayServerInitialized();
+          console.debug(`${info} Moving mouse relatively: dx=${cyan}${data.dx}${reset}, dy=${cyan}${data.dy}${reset}`);
+          this.displayServer.mouseRelativeMotion(this.displayContext, data.dx, data.dy);
+          this.displayServer.displayFlush(this.displayContext);
+        } else {
+          console.debug(`${warning} Rejected mouse_move from unauthenticated peer ${cyan}${info.address}:${info.port}${reset}`);
         }
       });
 
-      this.on("mouse_click", async (data, info) => {
+      this.on("mouse_abs", async (data, info) => {
         const peerKey = `${info.address}:${info.port}`;
         if (this.authenticatedPeers.has(peerKey)) {
-          if (!this.virtualMouse) {
-            const { VirtualMouse } = await import("../virtual.js");
-            this.virtualMouse = new VirtualMouse();
-            await this.virtualMouse.init();
-          }
-          console.debug(`${info} Mouse click: button=${cyan}${data.button}${reset}`);
-          await this.virtualMouse.click(data.button);
+          await this.ensureDisplayServerInitialized();
+          console.debug(`${info} Moving mouse to absolute position: x=${cyan}${data.x}${reset}, y=${cyan}${data.y}${reset}`);
+          this.displayServer.mouseMotion(this.displayContext, data.x, data.y);
+          this.displayServer.displayFlush(this.displayContext);
+        } else {
+          console.debug(`${warning} Rejected mouse_abs from unauthenticated peer ${cyan}${info.address}:${info.port}${reset}`);
         }
       });
 
-      this.on("mouse_drag", async (data, info) => {
+      this.on("mouse_button", async (data, info) => {
         const peerKey = `${info.address}:${info.port}`;
         if (this.authenticatedPeers.has(peerKey)) {
-          if (!this.virtualMouse) {
-            const { VirtualMouse } = await import("../virtual.js");
-            this.virtualMouse = new VirtualMouse();
-            await this.virtualMouse.init();
+          await this.ensureDisplayServerInitialized();
+          console.debug(`${info} Mouse button: button=${cyan}${data.button}${reset}, pressed=${cyan}${data.pressed}${reset}`);
+          this.displayServer.mouseButton(this.displayContext, data.button, data.pressed);
+          this.displayServer.displayFlush(this.displayContext);
+        } else {
+          console.debug(`${warning} Rejected mouse_button from unauthenticated peer ${cyan}${info.address}:${info.port}${reset}`);
+        }
+      });
+
+      this.on("mouse_wheel", async (data, info) => {
+        const peerKey = `${info.address}:${info.port}`;
+        if (this.authenticatedPeers.has(peerKey)) {
+          await this.ensureDisplayServerInitialized();
+          console.debug(`${info} Mouse wheel: horizontal=${cyan}${data.horizontal}${reset}, vertical=${cyan}${data.vertical}${reset}`);
+          this.displayServer.mouseWheel(this.displayContext, data.horizontal, data.vertical);
+          this.displayServer.displayFlush(this.displayContext);
+        } else {
+          console.debug(`${warning} Rejected mouse_wheel from unauthenticated peer ${cyan}${info.address}:${info.port}${reset}`);
+        }
+      });
+
+      this.on("key", async (data, info) => {
+        const peerKey = `${info.address}:${info.port}`;
+        if (this.authenticatedPeers.has(peerKey)) {
+          await this.ensureDisplayServerInitialized();
+          console.debug(`${info} Key event: keycode=${cyan}${data.keycode}${reset}, modifiers=${cyan}${data.modifiers}${reset}, pressed=${cyan}${data.pressed}${reset}`);
+          this.displayServer.key(this.displayContext, data.keycode, data.modifiers, data.pressed);
+          this.displayServer.displayFlush(this.displayContext);
+        } else {
+          console.debug(`${warning} Rejected key from unauthenticated peer ${cyan}${info.address}:${info.port}${reset}`);
+        }
+      });
+
+      this.on("key_raw", async (data, info) => {
+        const peerKey = `${info.address}:${info.port}`;
+        if (this.authenticatedPeers.has(peerKey)) {
+          await this.ensureDisplayServerInitialized();
+          console.debug(`${info} Raw key event: keycode=${cyan}${data.keycode}${reset}, pressed=${cyan}${data.pressed}${reset}`);
+          this.displayServer.keyRaw(this.displayContext, data.keycode, data.pressed);
+          this.displayServer.displayFlush(this.displayContext);
+        } else {
+          console.debug(`${warning} Rejected key_raw from unauthenticated peer ${cyan}${info.address}:${info.port}${reset}`);
+        }
+      });
+
+      this.on("key_release_all", async (data, info) => {
+        const peerKey = `${info.address}:${info.port}`;
+        if (this.authenticatedPeers.has(peerKey)) {
+          await this.ensureDisplayServerInitialized();
+          console.debug(`${info} Releasing all keys`);
+          this.displayServer.keyReleaseAll(this.displayContext);
+          this.displayServer.displayFlush(this.displayContext);
+        } else {
+          console.debug(`${warning} Rejected key_release_all from unauthenticated peer ${cyan}${info.address}:${info.port}${reset}`);
+        }
+      });
+
+      this.on("idle_inhibit", async (data, info) => {
+        const peerKey = `${info.address}:${info.port}`;
+        if (this.authenticatedPeers.has(peerKey)) {
+          await this.ensureDisplayServerInitialized();
+          console.debug(`${info} Setting idle inhibit: ${cyan}${data.inhibit}${reset}`);
+          this.displayServer.idleInhibit(this.displayContext, data.inhibit);
+          this.displayServer.displayFlush(this.displayContext);
+        } else {
+          console.debug(`${warning} Rejected idle_inhibit from unauthenticated peer ${cyan}${info.address}:${info.port}${reset}`);
+        }
+      });
+
+      this.on("clipboard", async (data, info) => {
+        const peerKey = `${info.address}:${info.port}`;
+        if (this.authenticatedPeers.has(peerKey)) {
+          await this.ensureDisplayServerInitialized();
+          
+          if (this.displayServer.haveClipboard()) {
+            console.debug(`${info} Setting clipboard data: primary=${cyan}${data.primary}${reset}, length=${cyan}${data.text.length}${reset}`);
+            const textBytes = new TextEncoder().encode(data.text);
+            this.displayServer.clipboardCopy(data.primary ? 1 : 0, textBytes, textBytes.length);
+          } else {
+            console.debug(`${warning} Clipboard not available`);
           }
-          console.debug(`${info} Mouse drag: x=${cyan}${data.x}${reset}, y=${cyan}${data.y}${reset}`);
-          await this.virtualMouse.dragTo(data.x, data.y);
+        } else {
+          console.debug(`${warning} Rejected clipboard from unauthenticated peer ${cyan}${info.address}:${info.port}${reset}`);
         }
       });
 
@@ -139,6 +216,144 @@ export class Peer {
     } catch (error) {
       console.error(`${error} Failed to initialize peer:`, error);
       return false;
+    }
+  }
+
+  // Initialize the display server if it's not already initialized
+  async ensureDisplayServerInitialized() {
+    if (!this.displayServer) {
+      console.debug(`${info} Initializing display server...`);
+      this.displayServer = await createDisplayServer();
+      
+      // Get display server type for logging
+      const serverType = this.displayServer.constructor.name
+        .replace('DisplayServer', '')
+        .toLowerCase();
+      
+      console.debug(`${info} Using display server: ${cyan}${serverType}${reset}`);
+      
+      // Create context
+      this.displayContext = this.displayServer.contextNew();
+      const success = this.displayServer.setup(this.displayContext, 1920, 1080);
+      
+      if (!success) {
+        console.error(`${error} Failed to set up display server`);
+        throw new Error("Failed to set up display server");
+      }
+    }
+    return this.displayServer;
+  }
+
+  // Lock the mouse and hide cursor
+  lockMouse() {
+    if (this.mouseLocked) {
+      console.log("Mouse already locked");
+      return;
+    }
+
+    try {
+      this.ensureDisplayServerInitialized();
+      
+      if (!this.displayServer || !this.displayContext) {
+        console.log("Failed to initialize display server for mouse locking");
+        return;
+      }
+
+      try {
+        // Check for legacy functions first
+        if (this.displayServer.type === 'x11') {
+          // Try legacy function for X11
+          console.log("Using X11 legacy functions for cursor handling");
+          if (cc.x11_hide_cursor && cc.x11_lock_input) {
+            cc.x11_hide_cursor(this.displayContext);
+            cc.x11_lock_input(this.displayContext);
+          } else {
+            // Fallback to mouse button press
+            this.displayServer.mouseButton(this.displayContext, 1, 1);
+          }
+        } else if (this.displayServer.type === 'wayland') {
+          // Try legacy function for Wayland
+          console.log("Using Wayland legacy functions for cursor handling");
+          if (cc.wayland_hide_cursor && cc.wayland_lock_input) {
+            cc.wayland_hide_cursor(this.displayContext);
+            cc.wayland_lock_input(this.displayContext);
+          } else {
+            // Fallback to mouse button press
+            this.displayServer.mouseButton(this.displayContext, 1, 1);
+          }
+        } else {
+          console.log(`Unknown display server type: ${this.displayServer.type}`);
+          // Generic fallback
+          this.displayServer.mouseButton(this.displayContext, 1, 1);
+        }
+        
+        this.mouseLocked = true;
+        console.log("🖱️  Mouse locked and hidden");
+      } catch (e) {
+        console.log(`Failed to hide cursor: ${e}`);
+        this.mouseLocked = false;
+      }
+    } catch (e) {
+      console.log(`Error during mouse lock: ${e}`);
+      this.mouseLocked = false;
+    }
+  }
+
+  // Unlock the mouse and show cursor
+  async unlockMouse() {
+    try {
+      if (!this.mouseLocked) return;
+      
+      // If no display server, we can't unlock
+      if (!this.displayServer || !this.displayContext) {
+        this.mouseLocked = false;
+        console.log(`${mouse} Mouse unlocked and visible`);
+        return;
+      }
+      
+      try {
+        const { symbols } = cc({
+          source: this.displayServer.constructor.name.includes("X11") 
+            ? "./src/x11/x11.c" 
+            : "./src/wayland/wayland.c",
+          symbols: {
+            x11_show_cursor: { args: [], returns: "i32" },
+            x11_unlock_input: { args: [], returns: "i32" },
+            wl_show_cursor: { args: [], returns: "i32" },
+            wl_unlock_input: { args: [], returns: "i32" }
+          },
+          includes: ["/usr/include"],
+          libs: ["dl"],
+          cflags: ["-ldl"]
+        });
+        
+        // Try to show cursor and unlock input based on the display server type
+        if (this.displayServer.constructor.name.includes("X11")) {
+          symbols.x11_show_cursor();
+          symbols.x11_unlock_input();
+        } else {
+          symbols.wl_show_cursor();
+          symbols.wl_unlock_input();
+        }
+      } catch (e) {
+        console.error(`Failed to show cursor: ${e}`);
+        
+        // Use button release as fallback for unlocking
+        try {
+          // Simulate mouse button release to unlock input as fallback
+          if (this.displayServer && this.displayContext) {
+            this.displayServer.mouseButton(this.displayContext, 1, 0);
+          }
+        } catch (err) {
+          console.error(`Failed to unlock input: ${err}`);
+        }
+      }
+      
+      this.mouseLocked = false;
+      console.log(`${mouse} Mouse unlocked and visible`);
+    } catch (error) {
+      console.error(`${error} Failed to unlock mouse:`, error);
+      this.mouseLocked = false; // Ensure flag is reset even if error
     }
   }
 
@@ -246,136 +461,70 @@ export class Peer {
 
       // Handle hello messages for peer discovery
       if (type === "hello") {
-        console.debug(`${info} Hello from peer ${cyan}${data.id}${reset} at ${cyan}${rinfo.address}:${rinfo.port}${reset}`);
-        // Add to peers list if not already there
-        if (!this.peers.has(peerKey)) {
-          this.peers.set(peerKey, {
-            address: rinfo.address,
-            port: rinfo.port,
-            lastSeen: Date.now()
-          });
-        }
-        // Send auth request if we have a token
-        if (this.authToken) {
-          console.debug(`${info} Sending auth request to ${cyan}${rinfo.address}:${rinfo.port}${reset}`);
-          this.broadcast("auth", { token: this.authToken });
-        }
+        console.debug(`${info} Processing hello from ${cyan}${rinfo.address}:${rinfo.port}${reset}`);
+        console.debug(`Message data: ${JSON.stringify(data, null, 2)}`);
+        this.peers.set(peerKey, {
+          address: rinfo.address,
+          port: rinfo.port,
+          lastSeen: Date.now(),
+          id: data.id
+        });
       }
 
-      // Handle auth messages
-      if (type === "auth") {
+      // Process message using the appropriate handler
+      if (this.handlers.has(type)) {
         const handler = this.handlers.get(type);
-        if (handler) {
-          handler(data, { sender, timestamp, address: rinfo.address, port: rinfo.port });
-        }
-        return; // Skip default handler processing for auth messages
-      }
-
-      // Handle disconnect
-      if (type === "disconnect") {
-        this.peers.delete(peerKey);
-        this.authenticatedPeers.delete(peerKey);
-        console.log(`${wave} Peer disconnected: ${rinfo.address}:${rinfo.port}`);
         
-        // Unlock mouse when last peer disconnects
-        if (this.authenticatedPeers.size === 0) {
-          this.unlockMouse();
-        }
-      }
-
-      // Update last seen time for existing peers
-      const peer = this.peers.get(peerKey);
-      if (peer) {
-        peer.lastSeen = Date.now();
-      }
-
-      // Call the appropriate handler
-      const handler = this.handlers.get(type);
-      if (handler) {
-        if (!this.authenticatedPeers.has(peerKey) && !["hello", "auth"].includes(type)) {
-          console.debug(`${warning} Rejected ${cyan}${type}${reset} from unauthenticated peer ${cyan}${rinfo.address}:${rinfo.port}${reset}`);
+        // Check authentication for non-hello and non-auth messages
+        if (type !== "hello" && type !== "auth" && !this.authenticatedPeers.has(peerKey)) {
+          console.debug(`${warning} Rejected ${type} from unauthenticated peer ${cyan}${rinfo.address}:${rinfo.port}${reset}`);
           return;
         }
-
+        
         console.debug(`${info} Processing ${cyan}${type}${reset} from ${cyan}${rinfo.address}:${rinfo.port}${reset}`);
-        if (data) {
-          console.debug(`${gray}Message data:${reset}`, data);
-        }
-        handler(data, { sender, timestamp, address: rinfo.address, port: rinfo.port });
+        console.debug(`Message data: ${JSON.stringify(data, null, 2)}`);
+        handler(data, rinfo);
       } else {
-        console.debug(`${warning} No handler for message type ${cyan}${type}${reset} from ${cyan}${rinfo.address}:${rinfo.port}${reset}`);
+        console.debug(`${warning} No handler for message type: ${cyan}${type}${reset}`);
       }
     } catch (error) {
-      console.error(`${error} Failed to handle message from ${cyan}${rinfo.address}:${rinfo.port}${reset}:`, error);
-    }
-  }
-
-  handleConnect(rinfo) {
-    const peerKey = `${rinfo.address}:${rinfo.port}`;
-    if (!this.peers.has(peerKey)) {
-      this.peers.set(peerKey, {
-        address: rinfo.address,
-        port: rinfo.port,
-        lastSeen: Date.now()
-      });
-      console.log(`${handshake} New peer connected: ${rinfo.address}:${rinfo.port}`);
-    }
-  }
-
-  handleDisconnect(rinfo) {
-    const peerKey = `${rinfo.address}:${rinfo.port}`;
-    this.peers.delete(peerKey);
-    this.authenticatedPeers.delete(peerKey);
-    console.log(`${wave} Peer disconnected: ${rinfo.address}:${rinfo.port}`);
-  }
-
-  async lockMouse() {
-    if (this.mouseLocked) return;
-    
-    try {
-      if (!this.virtualMouse) {
-        const { VirtualMouse } = await import("../virtual.js");
-        this.virtualMouse = new VirtualMouse();
-        await this.virtualMouse.init();
-      }
-      
-      // Hide cursor and lock input
-      await this.virtualMouse.hideCursor();
-      await this.virtualMouse.lockInput();
-      
-      this.mouseLocked = true;
-      console.log(`${mouse} Mouse locked and hidden`);
-    } catch (error) {
-      console.error(`${error} Failed to lock mouse:`, error);
-    }
-  }
-
-  async unlockMouse() {
-    if (!this.mouseLocked) return;
-    
-    try {
-      if (this.virtualMouse) {
-        await this.virtualMouse.showCursor();
-        await this.virtualMouse.unlockInput();
-      }
-      
-      this.mouseLocked = false;
-      console.log(`${mouse} Mouse unlocked and visible`);
-    } catch (error) {
-      console.error(`${error} Failed to unlock mouse:`, error);
+      console.error(`${error} Error handling message:`, error);
     }
   }
 
   cleanup() {
-    if (this.socket) {
-      this.socket.close();
-    }
-    if (this.virtualMouse) {
-      this.unlockMouse();
-      this.virtualMouse.cleanup();
-    }
-    this.peers.clear();
-    this.authenticatedPeers.clear();
     console.log(`${success} Cleaned up peer resources`);
+    
+    // Release mouse if it's locked
+    if (this.mouseLocked) {
+      this.unlockMouse().catch(err => {
+        console.error(`${error} Failed to unlock mouse during cleanup:`, err);
+      });
+    }
+    
+    // Clean up display server resources
+    if (this.displayServer && this.displayContext) {
+      try {
+        this.displayServer.contextFree(this.displayContext);
+        this.displayContext = null;
+        this.displayServer = null;
+      } catch (err) {
+        console.error(`${error} Failed to clean up display server resources:`, err);
+        // Ensure we null these out even if there's an error
+        this.displayContext = null;
+        this.displayServer = null;
+      }
+    }
+    
+    // Close the socket
+    if (this.socket) {
+      try {
+        this.socket.close();
+        this.socket = null;
+      } catch (err) {
+        console.error(`${error} Failed to close socket:`, err);
+        this.socket = null;
+      }
+    }
   }
 } 

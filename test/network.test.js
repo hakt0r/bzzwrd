@@ -4,11 +4,13 @@ import { Peer } from "../src/network/peer.js";
 test("peer networking", async () => {
   // Create two peers
   const peer1 = new Peer({
-    port: 12345
+    port: 12345,
+    token: "test-token"
   });
 
   const peer2 = new Peer({
-    port: 12346
+    port: 12346,
+    token: "test-token"
   });
 
   // Initialize peers
@@ -28,14 +30,14 @@ test("peer networking", async () => {
   // Connect peers
   await peer2.connect("127.0.0.1", 12345);
   
-  // Wait for connection to establish
-  await new Promise(resolve => setTimeout(resolve, 100));
+  // Wait for connection to establish and authentication to complete
+  await new Promise(resolve => setTimeout(resolve, 500));
 
   // Send test message
   await peer1.broadcast("test", testMessage);
 
   // Wait for message to be received
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await new Promise(resolve => setTimeout(resolve, 500));
   expect(messageReceived).toBe(true);
 
   // Cleanup
