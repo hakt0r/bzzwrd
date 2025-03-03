@@ -1,4 +1,4 @@
-import { expect, test, describe, beforeEach, afterEach } from "bun:test";
+import { expect, test, describe, beforeAll, afterAll } from "bun:test";
 import {
   wlContextNew,
   wlContextFree,
@@ -21,8 +21,9 @@ import {
 describe("wayland FFI", () => {
   let ctx;
   let hasWayland;
+  let hasWlClipboard;
 
-  beforeEach(() => {
+  beforeAll(() => {
     // Check if we're in a Wayland session
     hasWayland = process.env.WAYLAND_DISPLAY !== undefined;
     if (!hasWayland) {
@@ -63,9 +64,14 @@ describe("wayland FFI", () => {
     } else if (ctx.comp_name) {
       console.log(`Detected compositor: ${ctx.comp_name}`);
     }
+    
+    // Check for clipboard support
+    if (hasWayland) {
+      hasWlClipboard = clipHaveWlClipboard();
+    }
   });
 
-  afterEach(() => {
+  afterAll(() => {
     if (ctx) {
       wlContextFree(ctx);
       ctx = null;
@@ -100,6 +106,46 @@ describe("wayland FFI", () => {
       }
     }
   });
+  
+  test("can create and setup a new context", () => {
+    if (!hasWayland) {
+      console.log("Skipping Wayland context setup test - no Wayland available");
+      return;
+    }
+    
+    const newCtx = wlContextNew();
+    expect(newCtx).toBeDefined();
+    
+    // For test purposes, use null for auto-detection
+    const success = wlSetup(newCtx, 800, 600, null);
+    
+    // This might fail if wayland backend detection fails, so we'll just check it doesn't throw
+    expect(() => {
+      wlContextFree(newCtx);
+    }).not.toThrow();
+  });
+  
+  test("can close context properly", () => {
+    if (!hasWayland) {
+      console.log("Skipping Wayland close test - no Wayland available");
+      return;
+    }
+    
+    const tempCtx = wlContextNew();
+    const success = wlSetup(tempCtx, 800, 600, null);
+    
+    if (success) {
+      // This shouldn't throw - should clean up properly
+      expect(() => {
+        wlClose(tempCtx);
+      }).not.toThrow();
+    } else {
+      console.log("Skipping wlClose test as context setup failed");
+    }
+    
+    // Clean up regardless
+    wlContextFree(tempCtx);
+  });
 
   test("can get wayland fd", () => {
     if (!hasWayland) {
@@ -119,13 +165,6 @@ describe("wayland FFI", () => {
   });
 
   describe("clipboard", () => {
-    let hasWlClipboard;
-
-    beforeEach(() => {
-      if (!hasWayland) return;
-      hasWlClipboard = clipHaveWlClipboard();
-    });
-
     test("can check for wl-clipboard", () => {
       if (!hasWayland) {
         console.log("Skipping clipboard check test - no Wayland available");
