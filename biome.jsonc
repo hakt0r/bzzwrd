@@ -1,0 +1,47 @@
+{
+  "formatter": {
+    "indentStyle": "space", // default is `tab`
+    "lineWidth": 100 // default is `80`
+  },
+  "linter":{
+    "enabled": true,
+    "rules": {
+      "suspicious": {
+        "noDebugger": "off",
+        "noConsoleLog": "off",
+        "noAssignInExpressions": "off",
+        "noControlCharactersInRegex": "off"
+      },
+      "style": {
+        "useNamingConvention": "off",
+        "useDefaultParameterLast": "off",
+        "noParameterAssign": "off",
+        "noShoutyConstants": "warn",
+        "noCommaOperator": "off",
+        "useSingleVarDeclarator": "off"
+      },
+      "complexity": {
+        "noForEach": "off",
+        "noStaticOnlyClass": "off"
+      },
+      "performance": {
+        "noDelete": "off"
+      },
+      "a11y": {
+        "useHtmlLang": "off",
+        "useAltText": "off"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single", // default is `double`
+      "lineWidth": 120 // override `formatter.lineWidth`
+    }
+  },
+  "json": {
+    "formatter": {
+      "enabled": false
+    }
+  }
+}
