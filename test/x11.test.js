@@ -311,24 +311,24 @@ describe("X11 FFI", () => {
           symbols: {
             x11_hide_cursor: { args: [], returns: "i32" },
             x11_show_cursor: { args: [], returns: "i32" }
-          },
-          includes: ["/usr/include"],
-          libs: ["dl"],
-          cflags: ["-ldl"]
-        });
-        
-        expect(symbols.x11_hide_cursor()).toBe(0);
-        console.log("Cursor hidden");
-        
-        // Wait a bit to see the effect
-        Bun.sleep(50);
-        
-        expect(symbols.x11_show_cursor()).toBe(0);
-        console.log("Cursor shown");
-      }).not.toThrow();
-    });
+    },
+    includes: ["/usr/include"],
+    libs: ["dl"],
+    cflags: ["-ldl"]
+  });
 
-    test("can lock/unlock input", () => {
+        expect(symbols.x11_hide_cursor()).toBe(0);
+    console.log("Cursor hidden");
+    
+    // Wait a bit to see the effect
+        Bun.sleep(50);
+    
+        expect(symbols.x11_show_cursor()).toBe(0);
+    console.log("Cursor shown");
+      }).not.toThrow();
+  });
+
+  test("can lock/unlock input", () => {
       if (!hasX11) {
         console.log("Skipping input lock/unlock test - no X11 available");
         return;
