@@ -1,0 +1,37 @@
+{
+  "name": "bzzwrd",
+  "module": "index.js",
+  "type": "module",
+  "license": "MIT",
+  "author": {
+    "name": "Sebastian Glaser",
+    "email": "anx+bzzwrd-oss@hktr.de"
+  },
+  "description": "a synergy inspired remote control tool",
+  "keywords": ["wayland", "bun", "remote", "control", "tool"],
+  "dependencies": {
+    "bun": "latest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hakt0r/bzzwrd.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hakt0r/bzzwrd/issues"
+  },
+  "homepage": "https://github.com/hakt0r/bzzwrd#readme",
+  "scripts": {
+    "test": "bun test",
+    "test:wayland": "bun test test/wayland.test.js",
+    "dev": "bun run src/index.js",
+    "start": "bun src/cli.js",
+    "postinstall": "chmod +x src/cli.js && bun link",
+    "server:start": "bun src/cli.js spawn",
+    "server:stop": "bun src/cli.js kill",
+    "server:restart": "bun run server:stop; bun run server:start",
+    "server:status": "bun src/cli.js list"
+  },
+  "bin": {
+    "bzz": "./src/cli.js"
+  }
+}

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Comment=Synergy inspire remote control
+Exec=/usr/bin/bzz
+Icon=system-run
+Name=Bzzwrd
+StartupNotify=true
+Terminal=true
+TerminalOptions=\s--noclose
+Type=Application
+X-KDE-Wayland-Interfaces=org_kde_kwin_fake_input
+X-Desktop-File-Install-Version=0.26

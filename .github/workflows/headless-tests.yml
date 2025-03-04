@@ -1,0 +1,28 @@
+name: Wayland Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xvfb sway wl-clipboard libwayland-dev libxkbcommon-dev libinput-dev libwlroots-dev
+        
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      
+    - name: Install project dependencies
+      run: bun install
+      
+    - name: Run Wayland tests
+      run: bun test test/wayland.test.js 
