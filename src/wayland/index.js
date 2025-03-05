@@ -24,7 +24,10 @@ const { symbols } = cc({
     './src/wayland/protocol/generated/xdg-output-unstable-v1-protocol.c',
     './src/wayland/protocol/generated/xdg-shell-protocol.c',
   ],
-  include: ['src/wayland/include', 'src/wayland/protocol/generated'],
+  include: [
+    'src/wayland/include',
+    'src/wayland/protocol/generated',
+  ],
   system_include: [
     '/usr/include',
     '/usr/include/x86_64-linux-gnu',

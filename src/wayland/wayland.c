@@ -9,9 +9,6 @@
 #include <wayland-client-protocol.h>
 #include <sys/mman.h>
 #include <errno.h>
-#include "os.h"
-#include "ssb.h"
-#include "xmem.h"
 #include "wayland.h"
 #include <stdbool.h>
 

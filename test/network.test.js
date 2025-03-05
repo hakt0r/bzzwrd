@@ -1,4 +1,113 @@
-import { test, expect } from "bun:test";
+import { test, expect, mock } from "bun:test";
+
+// Mock the DisplayServer module and its X11 implementation
+mock.module("../src/display.js", () => {
+  const mockDisplayMethods = {
+    mouseMotion: mock(() => {}),
+    mouseRelativeMotion: mock(() => {}),
+    mouseButton: mock(() => {}),
+    mouseWheel: mock(() => {}),
+    keyRaw: mock(() => {}),
+    key: mock(() => {}),
+    keyReleaseAll: mock(() => {}),
+    displayFlush: mock(() => {}),
+    contextNew: mock(() => ({})),
+    contextFree: mock(() => {}),
+    setup: mock(() => true),
+    idleInhibit: mock(() => {}),
+    haveClipboard: mock(() => {}),
+    clipboardCopy: mock(() => {}),
+    clipboardPaste: mock(() => {}),
+    close: mock(() => {}),
+    setEnv: mock(() => {}),
+    unsetEnv: mock(() => {}),
+    prepareFd: mock(() => {})
+  };
+
+  // Create a mock DisplayServer base class
+  class MockDisplayServer {
+    constructor() {}
+    contextNew() { return {}; }
+    contextFree() {}
+    setup() { return true; }
+    close() {}
+    prepareFd() {}
+    displayFlush() {}
+    mouseMotion() {}
+    mouseRelativeMotion() {}
+    mouseButton() {}
+    mouseWheel() {}
+    keyRaw() {}
+    key() {}
+    keyReleaseAll() {}
+    idleInhibit() {}
+    haveClipboard() { return false; }
+    clipboardCopy() {}
+    clipboardPaste() {}
+    setEnv() {}
+    unsetEnv() {}
+  }
+
+  // Create X11 and Wayland classes
+  class X11 extends MockDisplayServer {
+    constructor() {
+      super();
+      this.type = 'x11';
+    }
+  }
+
+  class Wayland extends MockDisplayServer {
+    constructor() {
+      super();
+      this.type = 'wayland';
+    }
+  }
+
+  return {
+    DisplayServer: {
+      create: mock(() => new X11()),
+      X11,
+      Wayland
+    }
+  };
+});
+
+// Mock the FFI module with better symbol handling
+mock.module("bun:ffi", () => {
+  // Create individual symbol mocks
+  const symbolFunctions = {
+    x11_show_cursor: mock(() => 0),
+    x11_unlock_input: mock(() => 0),
+    wl_show_cursor: mock(() => 0),
+    wl_unlock_input: mock(() => 0),
+    wayland_show_cursor: mock(() => 0),
+    wayland_unlock_input: mock(() => 0),
+    x11_hide_cursor: mock(() => 0),
+    x11_lock_input: mock(() => 0),
+    wayland_hide_cursor: mock(() => 0),
+    wayland_lock_input: mock(() => 0)
+  };
+
+  // Create a function that returns an object with a symbols property
+  const ccFn = mock((options) => {
+    // Return the format that's expected when destructuring with { symbols }
+    return {
+      symbols: {
+        x11_show_cursor: mock(() => 0),
+        x11_unlock_input: mock(() => 0),
+        wl_show_cursor: mock(() => 0),
+        wl_unlock_input: mock(() => 0)
+      }
+    };
+  });
+  
+  // Also add the direct properties for direct access
+  Object.assign(ccFn, symbolFunctions);
+  
+  return { cc: ccFn };
+});
+
+// Import the Peer class after mocks are set up
 import { Peer } from "../src/network/peer.js";
 
 test("peer networking", async () => {
@@ -41,12 +150,17 @@ test("peer networking", async () => {
 
   // Send test message
   await peer1.broadcast("test", testMessage);
-
-  // Wait for message to be received
-  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  // Wait for the message to be received
+  await new Promise(resolve => setTimeout(resolve, 300));
+  
+  // Check if message was received
   expect(messageReceived).toBe(true);
-
-  // Cleanup
+  
+  // Clean up
   peer1.cleanup();
   peer2.cleanup();
+
+  // Restore all mocks after the test
+  mock.restore();
 }); 
