@@ -91,47 +91,6 @@ SHL_UNUSED static bool ssb_grow_min(struct ssb *s, size_t min)
 	return ssb_truncate(s, (newsize >= min ? newsize : min));
 }
 
-SHL_UNUSED static int ssb_vprintf(struct ssb *s, const char *fmt, va_list ap)
-{
-	va_list sizeap;
-	int size;
-
-	if (!s) {
-		errno = EINVAL;
-		return -1;
-	}
-
-	va_copy(sizeap, ap);
-	if ((size = vsnprintf(s->buf + s->pos, s->size - s->pos, fmt, sizeap)) >= s->size - s->pos) {
-		if (!ssb_grow_min(s, size)) {
-			return -1;
-		}
-		vsnprintf(s->buf + s->pos, s->size - s->pos, fmt, ap);
-	}
-	va_end(sizeap);
-	s->pos += size;
-
-	return 0;
-}
-
-SHL_UNUSED static int ssb_printf(struct ssb *s, const char *fmt, ...)
-{
-	int ret;
-	va_list ap;
-	va_start(ap, fmt);
-	ret = ssb_vprintf(s, fmt, ap);
-	va_end(ap);
-	return ret;
-}
-
-SHL_UNUSED static void ssb_rewind(struct ssb *s)
-{
-	s->pos = 0;
-	if (s->buf) {
-		*(s->buf) = '\0';
-	}
-}
-
 SHL_UNUSED static void ssb_free(struct ssb *s)
 {
 	s->pos = 0;
@@ -140,44 +99,6 @@ SHL_UNUSED static void ssb_free(struct ssb *s)
 	}
 	s->size = 0;
 	s->buf = NULL;
-}
-
-/* add a single character to the buffer */
-SHL_UNUSED static bool ssb_addc(struct ssb *s, unsigned char c)
-{
-	if (s->size - s->pos < 2) {
-		if (!ssb_grow_min(s, 1)) {
-		       return false;
-		}
-	}
-	s->buf[s->pos++] = c;
-	s->buf[s->pos] = '\0';
-	return true;
-}
-
-/* analogous to getdelim -- returns true if anything is successfully read */
-SHL_UNUSED static bool ssb_getdelim(struct ssb *s, int delim, FILE *f)
-{
-	int c;
-	size_t old_pos = s->pos;
-
-	while ((c = getc(f)) != EOF) {
-		if (!ssb_addc(s, c)) {
-			return false;
-		}
-
-		if (c == delim) {
-			return true;
-		}
-	}
-
-	return s->pos - old_pos;
-}
-
-/* a bit like getline -- return true if anything is successfully read */
-SHL_UNUSED static bool ssb_getline(struct ssb *s, FILE *f)
-{
-	return ssb_getdelim(s, '\n', f);
 }
 
 /* read an entire file into a buffer */
@@ -200,25 +121,12 @@ SHL_UNUSED static bool ssb_readfile(struct ssb *s, FILE *f)
 	return feof(f);
 }
 
-/* x variants -- can never fail! */
-SHL_UNUSED static void ssb_xvprintf(struct ssb *s, const char *fmt, va_list ap)
-{
-	if (ssb_vprintf(s, fmt, ap))
-		abort();
-}
-SHL_UNUSED static void ssb_xprintf(struct ssb *s, const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	ssb_xvprintf(s, fmt, ap);
-	va_end(ap);
-}
 SHL_UNUSED static void ssb_xtruncate(struct ssb *s, size_t newsize)
 {
 	if (!ssb_truncate(s, newsize))
 		abort();
 }
+
 #undef SHL_UNUSED
 #endif
 

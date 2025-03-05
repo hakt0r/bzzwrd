@@ -7,8 +7,6 @@
 #include <xkbcommon/xkbcommon.h>
 #include "os.h"
 #include "xmem.h"
-#include "config.h"
-#include "log.h"
 #include <unistd.h>
 #include <wayland-client.h>
 #include <wayland-client-protocol.h>

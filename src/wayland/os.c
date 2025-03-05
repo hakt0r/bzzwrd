@@ -12,7 +12,6 @@
 #include <sys/un.h>
 #include "ssb.h"
 #include "xmem.h"
-#include "log.h"
 
 #ifdef __FreeBSD__
 #include <sys/param.h>
@@ -26,7 +25,7 @@ bool osFileExists(const char *path)
 		return false;
 	}
 	if (!S_ISREG(buf.st_mode)) {
-		logWarn("%s is not a regular file as expected", path);
+		fprintf(stderr, "%s is not a regular file as expected", path);
 		return false;
 	}
 	return true;
@@ -137,17 +136,17 @@ char *osGetPeerProcName(int fd)
 	struct ssb s = {0};
 
 	if (getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &uc, &len) == -1) {
-		logPErr("GetPeerProcName: getsockopt() failure");
+		fprintf(stderr, "GetPeerProcName: getsockopt() failure");
 		return NULL;
 	}
 
 	xasprintf(&path, "/proc/%d/comm", uc.pid);
 	if (!(f = fopen(path, "r"))) {
-		logPErr("Could not open file");
+		fprintf(stderr, "Could not open file");
 		goto done;
 	}
 	if (!ssb_readfile(&s, f)) {
-		logPErr("Could not read process name");
+		fprintf(stderr, "Could not read process name");
 		ssb_free(&s);
 		goto done;
 	}
@@ -178,26 +177,26 @@ char *osGetPeerProcName(int fd)
 	int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID};
 
 	if (getsockopt(fd, SOL_LOCAL, LOCAL_PEERCRED, &cred, &slen) == -1) {
-		logPErr("GetPeerProcName: getsockopt() failure");
+		fprintf(stderr, "GetPeerProcName: getsockopt() failure");
 		goto done;
 	}
-	logDbg("Got peer pid of %d", cred.cr_pid);
+	fprintf(stderr, "Got peer pid of %d", cred.cr_pid);
 
 	mib[3] = cred.cr_pid;
 	if (sysctl(mib, nitems(mib), NULL, &len, NULL, 0) == -1) {
-		logPErr("sysctl failed to get size");
+		fprintf(stderr, "sysctl failed to get size");
 		goto done;
 	}
 	kip = xmalloc(len);
 
 	if (sysctl(mib, nitems(mib), kip, &len, NULL, 0) == -1) {
-		logPErr("sysctl failed to get proc info");
+		fprintf(stderr, "sysctl failed to get proc info");
 		goto done;
 	}
 	if ((len != sizeof(*kip)) ||
 	    (kip->ki_structsize != sizeof(*kip)) ||
 	    (kip->ki_pid != cred.cr_pid)) {
-		logErr("returned procinfo is unusable");
+		fprintf(stderr, "returned procinfo is unusable");
 		goto done;
 	}
 	name = xstrdup(kip->ki_comm);
@@ -209,7 +208,7 @@ done:
 #else
 char *osGetPeerProcName(int fd)
 {
-	logErr("osGetPeerProcName not implemented for this platform");
+	fprintf(stderr, "osGetPeerProcName not implemented for this platform");
 	return NULL;
 }
 #endif

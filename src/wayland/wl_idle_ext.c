@@ -12,7 +12,7 @@ struct ext_state {
 static void on_idle_mouse(void *data, struct ext_idle_notification_v1 *notification)
 {
 	struct wlIdle *idle = data;
-	logDbg("Got idle event, responding with zero mouse move");
+	fprintf(stderr, "Got idle event, responding with zero mouse move");
 	wlMouseRelativeMotion(idle->wl_ctx, 0, 0);
 }
 static void on_idle_key(void *data, struct ext_idle_notification_v1 *notification)
@@ -20,7 +20,7 @@ static void on_idle_key(void *data, struct ext_idle_notification_v1 *notificatio
 	struct wlIdle *idle = data;
 	struct ext_state *ext = idle->state;
 	//Second try at this -- press a key we do not care about
-	logDbg("Got idle event, responding with keypress");
+	fprintf(stderr, "Got idle event, responding with keypress");
 	if (ext->key_raw != -1) {
 		wlKeyRaw(idle->wl_ctx, ext->key_raw, true);
 		wlKeyRaw(idle->wl_ctx, ext->key_raw, false);
@@ -31,7 +31,7 @@ static void on_idle_key(void *data, struct ext_idle_notification_v1 *notificatio
 }
 static void on_resumed(void *data, struct ext_idle_notification_v1 *notification)
 {
-	logDbg("Got resume event");
+	fprintf(stderr, "Got resume event");
 }
 
 static void inhibit_start(struct wlIdle *idle)
@@ -40,7 +40,7 @@ static void inhibit_start(struct wlIdle *idle)
 
 	ext->notification = ext_idle_notifier_v1_get_idle_notification(idle->wl_ctx->idle_notifier, ext->idle_time * 1000, idle->wl_ctx->seat);
 	if (!ext->notification) {
-		logErr("Could not get idle notification");
+		fprintf(stderr, "Could not get idle notification");
 		return;
 	}
 	ext_idle_notification_v1_add_listener(ext->notification, &ext->listener, idle);
@@ -52,7 +52,7 @@ static void inhibit_stop(struct wlIdle *idle)
 	struct ext_state *ext = idle->state;
 
 	if (!ext->notification) {
-		logDbg("Idle already not inhibited");
+		fprintf(stderr, "Idle already not inhibited");
 		return;
 	}
 	ext_idle_notification_v1_destroy(ext->notification);
@@ -66,14 +66,14 @@ bool wlIdleInitExt(struct wlContext *ctx)
 	char *idle_keyname;
 
 	if (!ctx->idle_notifier) {
-		logWarn("ext-idle-notify-v1 idle inhibit selected, but no idle notifier support");
+		fprintf(stderr, "ext-idle-notify-v1 idle inhibit selected, but no idle notifier support");
 		return false;
 	}
 	struct ext_state *ext = xcalloc(1, sizeof(*ext));
 	ext->listener.resumed = on_resumed;
 
-	ext->idle_time = configTryLong("idle-inhibit/interval", 30);
-	idle_method = configTryString("idle-inhibit/method", "mouse");
+	ext->idle_time = 30 * 1000;
+	idle_method = xstrdup("mouse");
 
 	if (!strcmp(idle_method, "mouse")) {
 		ext->listener.idled = on_idle_mouse;
@@ -81,12 +81,12 @@ bool wlIdleInitExt(struct wlContext *ctx)
 		ext->listener.idled = on_idle_key;
 		/* first try a raw keycode for idle, because in case
 		 * of uinput xkb map might be rather useless */
-		ext->key_raw = configTryLong("idle-inhibit/keycode", -1);
-		idle_keyname = configTryString("idle-inhibit/keyname", "HYPR");
+		ext->key_raw = -1;
+		idle_keyname = xstrdup("HYPR");
 		ext->key = xkb_keymap_key_by_name(ctx->input.xkb_map, idle_keyname);
 		free(idle_keyname);
 	} else {
-		logErr("Unknown idle inhibition method %s, initialization failed", idle_method);
+		fprintf(stderr, "Unknown idle inhibition method %s, initialization failed", idle_method);
 		free(idle_method);
 		free(ext);
 		return false;

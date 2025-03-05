@@ -8,15 +8,24 @@
 #include <wayland-client.h>
 #include <wayland-client-protocol.h>
 #include <sys/mman.h>
-#include "config.h"
+#include <errno.h>
 #include "os.h"
 #include "ssb.h"
 #include "xmem.h"
 #include "wayland.h"
 #include <stdbool.h>
-#include "log.h"
-#include "sig.h"
 
+// Define error codes that were previously in sig.h
+enum sigExitStatus {
+    SES_SUCCESS = EXIT_SUCCESS,
+    SES_ERROR_GENERIC = 1,
+    SES_ERROR_ARGS,
+    SES_ERROR_CONFIG,
+    SES_ERROR_CONN,
+    SES_ERROR_WL,
+    SES_ERROR_CLIP,
+    SES_ERROR_FATAL,
+};
 
 static char *display_strerror(int error)
 {
@@ -38,10 +47,7 @@ static void wl_log_handler(const char *fmt, va_list ap)
 	fprintf(stderr, "Wayland error: ");
 	vfprintf(stderr, fmt, ap);
 	fprintf(stderr, "\n");
-	if (configTryBool("wayland/log_fatal", true)) {
-		fprintf(stderr, "Logged wayland errors set to fatal\n");
-		ExitOrRestart(SES_ERROR_WL);
-	}
+	fprintf(stderr, "Logged wayland errors set to fatal\n");
 }
 
 static bool wl_display_flush_base(struct wlContext *ctx)
@@ -62,7 +68,7 @@ static bool wl_display_flush_base(struct wlContext *ctx)
 			} else {
 				fprintf(stderr, "No wayland display error, but flush failed\n");
 			}
-			ExitOrRestart(SES_ERROR_WL);
+			return false;
 		}
 	}
 	return true;
@@ -98,11 +104,9 @@ static bool wl_display_flush_block(struct wlContext *ctx)
 
 void wlDisplayFlush(struct wlContext *ctx)
 {
-	if (!wl_display_flush_base(ctx)) {
-		if (!wl_display_flush_block(ctx)) {
-			ExitOrRestart(SES_ERROR_WL);
-		}
-	}
+	if (wl_display_flush_base(ctx)) return;
+	if (wl_display_flush_block(ctx)) return;
+	fprintf(stderr, "Display flush failed\n");
 }
 
 void wlOutputAppend(struct wlOutput **outputs, struct wl_output *output, struct zxdg_output_v1 *xdg_output, uint32_t wl_name)
@@ -360,7 +364,7 @@ static void keyboard_keymap(void *data, struct wl_keyboard *wl_kb, uint32_t form
 	struct wlContext *ctx = data;
 	char *buf = NULL;
 	char *map = NULL;
-	if (!configTryBool("wl_keyboard_map", true)) {
+	if (!true) {
 		goto cleanup;
 	}
 
@@ -524,7 +528,7 @@ bool wlSetup(struct wlContext *ctx, int width, int height, char *backend)
 	bool input_init = false;
 
 	wl_log_set_handler_client(&wl_log_handler);
-	ctx->timeout = configTryLong("wayland/flush_timeout", 5000);
+	ctx->timeout = 5000;
 
 	ctx->width = width;
 	ctx->height = height;
@@ -567,7 +571,7 @@ bool wlSetup(struct wlContext *ctx, int width, int height, char *backend)
 	}
 
 	/* initiailize idle inhibition */
-	if (configTryBool("idle-inhibit/enable", true)) {
+	if (true) {
 		if (wlIdleInitExt(ctx)) {
 			fprintf(stderr, "Using ext-idle-notify-v1 idle inhibition protocol\n");
 		} else if (wlIdleInitKde(ctx)) {
@@ -617,10 +621,8 @@ void wlPollProc(struct wlContext *ctx, short revents)
 //		wl_display_cancel_read(display);
 		wl_display_dispatch(ctx->display);
 	}
-	if (revents & POLLHUP) {
-		fprintf(stderr, "Lost wayland connection\n");
-		Exit(SES_ERROR_WL);
-	}
+	if (revents & POLLHUP) return;
+	fprintf(stderr, "Lost wayland connection\n");
 }
 
 struct wlContext *wlContextNew(void)

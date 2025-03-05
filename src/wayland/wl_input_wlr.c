@@ -1,8 +1,6 @@
 #include "wayland.h"
 #include <stdbool.h>
-#include "log.h"
 #include "fdio_full.h"
-#include "config.h"
 #include <xkbcommon/xkbcommon.h>
 #include <spawn.h>
 #include <ctype.h>
@@ -18,7 +16,7 @@ struct state_wlr {
 /* create a layout file descriptor */
 static bool key_map(struct wlInput *input, char *keymap_str)
 {
-	logDbg("Setting virtual keymap");
+	fprintf(stderr, "Setting virtual keymap");
 	struct state_wlr *wlr = input->state;
 	int fd;
 	if ((fd = osGetAnonFd()) == -1) {
@@ -101,8 +99,8 @@ bool wlInputInitWlr(struct wlContext *ctx)
 	 * logic shouldn't be needed anymore, but we'll leave it configurable
 	 * just in case */
 	wheel_mult_default = 1;
-	wlr->wheel_mult = configTryLong("wlr/wheel_mult", wheel_mult_default);
-	logDbg("Using wheel_mult value of %d", wlr->wheel_mult);
+	wlr->wheel_mult = 1; // Default 1
+	fprintf(stderr, "Using wheel_mult value of %d", wlr->wheel_mult);
 	ctx->input = (struct wlInput) {
 		.state = wlr,
 		.wl_ctx = ctx,
@@ -114,7 +112,7 @@ bool wlInputInitWlr(struct wlContext *ctx)
 		.key_map = key_map,
 	};
 	wlLoadButtonMap(ctx);
-	logInfo("Using wlroots virtual input protocols");
+	fprintf(stderr, "Using wlroots virtual input protocols");
 	return true;
 }
 
