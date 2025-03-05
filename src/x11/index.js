@@ -3,11 +3,14 @@ import { cc } from 'bun:ffi';
 import source from './x11.c' with { type: 'file' };
 import { DisplayServer } from '../display.js';
 
+const DEBUG = process.env.DEBUG ? { __DEBUG__: '1' } : {};
+
 const { symbols } = cc({
   source,
   includes: ['/usr/include'],
   libs: ['dl', 'X11', 'Xfixes', 'Xtst', 'Xext'],
   cflags: ['-ldl'],
+  define: { ...DEBUG },
   symbols: {
     x11_hide_cursor: {
       args: [],
@@ -210,7 +213,7 @@ export class X11 extends DisplayServer {
       } else {
         args.push('-selection', 'clipboard');
       }
-      
+
       const proc = Bun.spawn({ cmd: args, stdin: 'pipe' });
       proc.stdin.write(data.slice(0, length));
       proc.stdin.end();
@@ -220,7 +223,7 @@ export class X11 extends DisplayServer {
       return false;
     }
   }
-  
+
   clipboardPaste(isPrimary) {
     try {
       const args = ['xclip', '-o'];
@@ -229,7 +232,7 @@ export class X11 extends DisplayServer {
       } else {
         args.push('-selection', 'clipboard');
       }
-      
+
       const result = Bun.spawnSync(args);
       if (result.exitCode === 0) {
         return result.stdout.toString();

@@ -44,10 +44,10 @@ static char *display_strerror(int error)
 
 static void wl_log_handler(const char *fmt, va_list ap)
 {
-	fprintf(stderr, "Wayland error: ");
-	vfprintf(stderr, fmt, ap);
-	fprintf(stderr, "\n");
-	fprintf(stderr, "Logged wayland errors set to fatal\n");
+	LOG(stderr, "Wayland error: ");
+	LOG(stderr, fmt, ap);
+	LOG(stderr, "\n");
+	LOG(stderr, "Logged wayland errors set to fatal\n");
 }
 
 static bool wl_display_flush_base(struct wlContext *ctx)
@@ -55,7 +55,7 @@ static bool wl_display_flush_base(struct wlContext *ctx)
 	int error;
 
 	if ((error = wl_display_get_error(ctx->display))) {
-		fprintf(stderr, "Wayland display error %d: %s\n", error, display_strerror(error));
+		LOG(stderr, "Wayland display error %d: %s\n", error, display_strerror(error));
 		return false;
 	}
 
@@ -64,9 +64,9 @@ static bool wl_display_flush_base(struct wlContext *ctx)
 			return false;
 		} else {
 			if ((error = wl_display_get_error(ctx->display))) {
-				fprintf(stderr, "Wayland display error %d: %s\n", error, display_strerror(error));
+				LOG(stderr, "Wayland display error %d: %s\n", error, display_strerror(error));
 			} else {
-				fprintf(stderr, "No wayland display error, but flush failed\n");
+				LOG(stderr, "No wayland display error, but flush failed\n");
 			}
 			return false;
 		}
@@ -89,14 +89,14 @@ static bool wl_display_flush_block(struct wlContext *ctx)
 			if (wl_display_flush_base(ctx)) {
 				return true;
 			}
-			fprintf(stderr, "blocking display flush failed\n");
+			LOG(stderr, "blocking display flush failed\n");
 		} else {
-			fprintf(stderr, "blocking display flush socket unwritable\n");
+			LOG(stderr, "blocking display flush socket unwritable\n");
 		}
 	} else if (pret == 0) {
-		fprintf(stderr, "blocking display flush timed out\n");
+		LOG(stderr, "blocking display flush timed out\n");
 	} else if (pret == -1)  {
-		fprintf(stderr, "blocking display poll failed\n");
+		LOG(stderr, "blocking display poll failed\n");
 	}
 
 	return false;
@@ -106,7 +106,7 @@ void wlDisplayFlush(struct wlContext *ctx)
 {
 	if (wl_display_flush_base(ctx)) return;
 	if (wl_display_flush_block(ctx)) return;
-	fprintf(stderr, "Display flush failed\n");
+	LOG(stderr, "Display flush failed\n");
 }
 
 void wlOutputAppend(struct wlOutput **outputs, struct wl_output *output, struct zxdg_output_v1 *xdg_output, uint32_t wl_name)
@@ -167,7 +167,7 @@ void wlOutputRemove(struct wlOutput **outputs, struct wlOutput *output)
 				break;
 		}
 		if (!prev) {
-			fprintf(stderr, "Tried to remove unknown output\n");
+			LOG(stderr, "Tried to remove unknown output\n");
 			return;
 		}
 		prev->next = prev->next->next;
@@ -190,19 +190,19 @@ static void output_geometry(void *data, struct wl_output *wl_output, int32_t x, 
 	struct wlContext *ctx = data;
 	struct wlOutput *output = wlOutputGet(ctx->outputs, wl_output);
 	if (!output) {
-		fprintf(stderr, "Output not found\n");
+		LOG(stderr, "Output not found\n");
 		return;
 	}
-	fprintf(stderr, "Mutating output...\n");
+	LOG(stderr, "Mutating output...\n");
 	if (output->have_log_pos) {
-		fprintf(stderr, "Except not really, because the logical position outweighs this\n");
+		LOG(stderr, "Except not really, because the logical position outweighs this\n");
 		return;
 	}
 	output->complete = false;
 	output->x = x;
 	output->y = y;
 
-	fprintf(stderr, "Got output at position %d,%d\n", x, y);
+	LOG(stderr, "Got output at position %d,%d\n", x, y);
 }
 
 static void output_mode(void *data, struct wl_output *wl_output, uint32_t flags, int32_t width, int32_t height, int32_t refresh)
@@ -211,18 +211,18 @@ static void output_mode(void *data, struct wl_output *wl_output, uint32_t flags,
 	struct wlOutput *output = wlOutputGet(ctx->outputs, wl_output);
 	bool preferred = flags & WL_OUTPUT_MODE_PREFERRED;
 	bool current = flags & WL_OUTPUT_MODE_CURRENT;
-	fprintf(stderr, "Got %smode: %dx%d@%d%s\n", current ? "current " : "", width, height, refresh, preferred ? "*" : "");
+	LOG(stderr, "Got %smode: %dx%d@%d%s\n", current ? "current " : "", width, height, refresh, preferred ? "*" : "");
 	if (!output) {
-		fprintf(stderr, "Output not found in list\n");
+		LOG(stderr, "Output not found in list\n");
 		return;
 	}
 	if (current) {
 		if (!preferred) {
-			fprintf(stderr, "Not using preferred mode on output -- check config\n");
+			LOG(stderr, "Not using preferred mode on output -- check config\n");
 		}
-		fprintf(stderr, "Mutating output...\n");
+		LOG(stderr, "Mutating output...\n");
 		if (output->have_log_size) {
-			fprintf(stderr, "Except not really, because the logical size outweighs this\n");
+			LOG(stderr, "Except not really, because the logical size outweighs this\n");
 			return;
 		}
 		output->complete = false;
@@ -235,12 +235,12 @@ static void output_scale(void *data, struct wl_output *wl_output, int32_t factor
 {
 	struct wlContext *ctx = data;
 	struct wlOutput *output = wlOutputGet(ctx->outputs, wl_output);
-	fprintf(stderr, "Got scale factor for output: %d\n", factor);
+	LOG(stderr, "Got scale factor for output: %d\n", factor);
 	if (!output) {
-		fprintf(stderr, "Output not found in list\n");
+		LOG(stderr, "Output not found in list\n");
 		return;
 	}
-	fprintf(stderr, "Mutating output...\n");
+	LOG(stderr, "Mutating output...\n");
 	output->complete = false;
 	output->scale = factor;
 }
@@ -250,17 +250,17 @@ static void output_done(void *data, struct wl_output *wl_output)
 	struct wlContext *ctx = data;
 	struct wlOutput *output = wlOutputGet(ctx->outputs, wl_output);
 	if (!output) {
-		fprintf(stderr, "Output not found in list\n");
+		LOG(stderr, "Output not found in list\n");
 		return;
 	}
 	output->complete = true;
 	if (output->name) {
-		fprintf(stderr, "Output name: %s\n", output->name);
+		LOG(stderr, "Output name: %s\n", output->name);
 	}
 	if (output->desc) {
-		fprintf(stderr, "Output description: %s\n", output->desc);
+		LOG(stderr, "Output description: %s\n", output->desc);
 	}
-	fprintf(stderr, "Output updated: %dx%d at %d, %d (scale: %d)\n",
+	LOG(stderr, "Output updated: %dx%d at %d, %d (scale: %d)\n",
 			output->width,
 			output->height,
 			output->x,
@@ -273,7 +273,7 @@ static void output_done(void *data, struct wl_output *wl_output)
 		complete = complete && output->complete;
 	}
 	if (complete) {
-		fprintf(stderr, "All outputs updated, triggering event\n");
+		LOG(stderr, "All outputs updated, triggering event\n");
 		if (ctx->on_output_update)
 			ctx->on_output_update(ctx);
 	}
@@ -281,14 +281,14 @@ static void output_done(void *data, struct wl_output *wl_output)
 
 static void xdg_output_pos(void *data, struct zxdg_output_v1 *xdg_output, int32_t x, int32_t y)
 {
-	fprintf(stderr, "Got xdg output position: %d, %d\n", x, y);
+	LOG(stderr, "Got xdg output position: %d, %d\n", x, y);
 	struct wlContext *ctx = data;
 	struct wlOutput *output = wlOutputGetXdg(ctx->outputs, xdg_output);
 	if (!output) {
-		fprintf(stderr, "Could not find xdg output\n");
+		LOG(stderr, "Could not find xdg output\n");
 		return;
 	}
-	fprintf(stderr, "Mutating output from xdg_output event\n");
+	LOG(stderr, "Mutating output from xdg_output event\n");
 	output->complete = false;
 	output->have_log_pos = true;
 	output->x = x;
@@ -297,14 +297,14 @@ static void xdg_output_pos(void *data, struct zxdg_output_v1 *xdg_output, int32_
 
 static void xdg_output_size(void *data, struct zxdg_output_v1 *xdg_output, int32_t width, int32_t height)
 {
-	fprintf(stderr, "Got xdg output size: %dx%d\n", width, height);
+	LOG(stderr, "Got xdg output size: %dx%d\n", width, height);
 	struct wlContext *ctx = data;
 	struct wlOutput *output = wlOutputGetXdg(ctx->outputs, xdg_output);
 	if (!output) {
-		fprintf(stderr, "Could not find xdg output\n");
+		LOG(stderr, "Could not find xdg output\n");
 		return;
 	}
-	fprintf(stderr, "Mutating output from xdg_output event\n");
+	LOG(stderr, "Mutating output from xdg_output event\n");
 	output->complete = false;
 	output->have_log_size = true;
 	output->width = width;
@@ -313,14 +313,14 @@ static void xdg_output_size(void *data, struct zxdg_output_v1 *xdg_output, int32
 
 static void xdg_output_name(void *data, struct zxdg_output_v1 *xdg_output, const char *name)
 {
-	fprintf(stderr, "Got xdg output name: %s\n", name);
+	LOG(stderr, "Got xdg output name: %s\n", name);
 	struct wlContext *ctx = data;
 	struct wlOutput *output = wlOutputGetXdg(ctx->outputs, xdg_output);
 	if (!output) {
-		fprintf(stderr, "Could not find xdg output\n");
+		LOG(stderr, "Could not find xdg output\n");
 		return;
 	}
-	fprintf(stderr, "Mutating output from xdg_output event\n");
+	LOG(stderr, "Mutating output from xdg_output event\n");
 	output->complete = false;
 	if (output->name) {
 		free(output->name);
@@ -330,14 +330,14 @@ static void xdg_output_name(void *data, struct zxdg_output_v1 *xdg_output, const
 
 static void xdg_output_desc(void *data, struct zxdg_output_v1 *xdg_output, const char *desc)
 {
-	fprintf(stderr, "Got xdg output desc: %s\n", desc);
+	LOG(stderr, "Got xdg output desc: %s\n", desc);
 	struct wlContext *ctx = data;
 	struct wlOutput *output = wlOutputGetXdg(ctx->outputs, xdg_output);
 	if (!output) {
-		fprintf(stderr, "Could not find xdg output\n");
+		LOG(stderr, "Could not find xdg output\n");
 		return;
 	}
-	fprintf(stderr, "Mutating output from xdg_output event\n");
+	LOG(stderr, "Mutating output from xdg_output event\n");
 	output->complete = false;
 	if (output->desc) {
 		free(output->desc);
@@ -369,7 +369,7 @@ static void keyboard_keymap(void *data, struct wl_keyboard *wl_kb, uint32_t form
 	}
 
 	if ((map = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED) {
-		fprintf(stderr, "Could not map keymap from fd\n");
+		LOG(stderr, "Could not map keymap from fd\n");
 		goto cleanup;
 	}
 
@@ -378,7 +378,7 @@ static void keyboard_keymap(void *data, struct wl_keyboard *wl_kb, uint32_t form
 	free(ctx->kb_map);
 	ctx->kb_map = buf;
 	buf = NULL;
-	fprintf(stderr, "Current keymap updated\n");
+	LOG(stderr, "Current keymap updated\n");
 	free(buf);
 	munmap(map, size);
 cleanup:
@@ -419,10 +419,10 @@ static void seat_capabilities(void *data, struct wl_seat *wl_seat, uint32_t caps
 	struct wlContext *ctx = data;
 	ctx->seat_caps = caps;
 	if (caps & WL_SEAT_CAPABILITY_POINTER) {
-		fprintf(stderr, "Seat has pointer\n");
+		LOG(stderr, "Seat has pointer\n");
 	}
 	if (caps & WL_SEAT_CAPABILITY_KEYBOARD) {
-		fprintf(stderr, "Seat has keyboard\n");
+		LOG(stderr, "Seat has keyboard\n");
 		ctx->kb = wl_seat_get_keyboard(wl_seat);
 		wl_keyboard_add_listener(ctx->kb, &keyboard_listener, ctx);
 		wl_display_dispatch(ctx->display);
@@ -432,7 +432,7 @@ static void seat_capabilities(void *data, struct wl_seat *wl_seat, uint32_t caps
 
 static void seat_name(void *data, struct wl_seat *seat, const char *name)
 {
-	fprintf(stderr, "Seat name is %s\n", name);
+	LOG(stderr, "Seat name is %s\n", name);
 }
 
 static struct wl_seat_listener seat_listener = {
@@ -456,7 +456,7 @@ static void handle_global(void *data, struct wl_registry *registry, uint32_t nam
 		ctx->fake_input = wl_registry_bind(registry, name, &org_kde_kwin_fake_input_interface, 4);
 	} else if (strcmp(interface, zxdg_output_manager_v1_interface.name) ==0) {
 		if (version < 3) {
-			fprintf(stderr, "xdg-output too old (version %d)\n", version);
+			LOG(stderr, "xdg-output too old (version %d)\n", version);
 			return;
 		}
 		ctx->output_manager = wl_registry_bind(registry, name, &zxdg_output_manager_v1_interface, 3);
@@ -479,10 +479,10 @@ static void handle_global(void *data, struct wl_registry *registry, uint32_t nam
 		}
 		wlOutputAppend(&ctx->outputs, wl_output, xdg_output, name);
 	} else if (strcmp(interface, org_kde_kwin_idle_interface.name) == 0) {
-		fprintf(stderr, "Got idle manager\n");
+		LOG(stderr, "Got idle manager\n");
 		ctx->idle_manager = wl_registry_bind(registry, name, &org_kde_kwin_idle_interface, version);
 	} else if (strcmp(interface, ext_idle_notifier_v1_interface.name) == 0) {
-		fprintf(stderr, "Got idle notifier\n");
+		LOG(stderr, "Got idle notifier\n");
 		ctx->idle_notifier = wl_registry_bind(registry, name, &ext_idle_notifier_v1_interface, version);
 	}
 }
@@ -495,7 +495,7 @@ static void handle_global_remove(void *data, struct wl_registry *registry, uint3
 	/* for now we only handle the case of outputs going away */
 	output = wlOutputGetWlName(ctx->outputs, name);
 	if (output) {
-		fprintf(stderr, "Lost output %s\n", output->name ? output->name : "");
+		LOG(stderr, "Lost output %s\n", output->name ? output->name : "");
 		wlOutputRemove(&ctx->outputs, output);
 		ctx->on_output_update(ctx);
 	}
@@ -542,7 +542,7 @@ bool wlSetup(struct wlContext *ctx, int width, int height, char *backend)
 	}
 
 	if (!ctx->display) {
-		fprintf(stderr, "Could not connect to display: %s\n", strerror(errno));
+		LOG(stderr, "Could not connect to display: %s\n", strerror(errno));
 		return false;
 	}
 
@@ -554,35 +554,35 @@ bool wlSetup(struct wlContext *ctx, int width, int height, char *backend)
 	/* figure out which compositor we are using */
 	fd = wl_display_get_fd(ctx->display);
 	ctx->comp_name = osGetPeerProcName(fd);
-	fprintf(stderr, "Compositor seems to be %s\n", ctx->comp_name);
+	LOG(stderr, "Compositor seems to be %s\n", ctx->comp_name);
 
 	if (wlInputInitWlr(ctx)) {
-		fprintf(stderr, "Using wlroots protocols for virtual input\n");
+		LOG(stderr, "Using wlroots protocols for virtual input\n");
 	} else if (wlInputInitKde(ctx)) {
-		fprintf(stderr, "Using kde protocols for virtual input\n");
+		LOG(stderr, "Using kde protocols for virtual input\n");
 	} else {
-		fprintf(stderr, "Virtual input not supported by compositor\n");
+		LOG(stderr, "Virtual input not supported by compositor\n");
 		return false;
 	}
 	
 	if(wlKeySetConfigLayout(ctx)) {
-		fprintf(stderr, "Could not configure virtual keyboard\n");
+		LOG(stderr, "Could not configure virtual keyboard\n");
 		return false;
 	}
 
 	/* initiailize idle inhibition */
 	if (true) {
 		if (wlIdleInitExt(ctx)) {
-			fprintf(stderr, "Using ext-idle-notify-v1 idle inhibition protocol\n");
+			LOG(stderr, "Using ext-idle-notify-v1 idle inhibition protocol\n");
 		} else if (wlIdleInitKde(ctx)) {
-			fprintf(stderr, "Using KDE idle inhibition protocol\n");
+			LOG(stderr, "Using KDE idle inhibition protocol\n");
 		} else if (wlIdleInitGnome(ctx)) {
-			fprintf(stderr, "Using GNOME idle inhibition through gnome-session-inhibit\n");
+			LOG(stderr, "Using GNOME idle inhibition through gnome-session-inhibit\n");
 		} else {
-			fprintf(stderr, "No idle inhibition support\n");
+			LOG(stderr, "No idle inhibition support\n");
 		}
 	} else {
-		fprintf(stderr, "Idle inhibition explicitly disabled\n");
+		LOG(stderr, "Idle inhibition explicitly disabled\n");
 	}
 
 	/* set FD_CLOEXEC */
@@ -599,7 +599,7 @@ void wlResUpdate(struct wlContext *ctx, int width, int height)
 	if (ctx->input.update_geom) {
 		ctx->input.update_geom(&ctx->input);
 	} else {
-		fprintf(stderr, "Current output backend does not update input geometry\n");
+		LOG(stderr, "Current output backend does not update input geometry\n");
 	}
 }
 
@@ -622,7 +622,7 @@ void wlPollProc(struct wlContext *ctx, short revents)
 		wl_display_dispatch(ctx->display);
 	}
 	if (revents & POLLHUP) return;
-	fprintf(stderr, "Lost wayland connection\n");
+	LOG(stderr, "Lost wayland connection\n");
 }
 
 struct wlContext *wlContextNew(void)

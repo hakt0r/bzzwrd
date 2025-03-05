@@ -25,7 +25,7 @@ void wlLoadButtonMap(struct wlContext *ctx)
 	for (i = 0; i < WL_INPUT_BUTTON_COUNT; ++i) {
 		xasprintf(&key, "button-map/%d", i);
 		ctx->input.button_map[i] = default_map[i];
-		fprintf(stderr, "Set button mapping: %d -> %d", i, ctx->input.button_map[i]);
+		LOG(stderr, "Set button mapping: %d -> %d", i, ctx->input.button_map[i]);
 		free(key);
 	}
 };
@@ -68,12 +68,12 @@ static void load_raw_keymap(struct wlContext *ctx)
 	}
 	/* start with the xkb maximum */
 	ctx->input.key_count = xkb_keymap_max_keycode(ctx->input.xkb_map) + 1;
-	fprintf(stderr, "max key: %zu", ctx->input.key_count);
+	LOG(stderr, "max key: %zu", ctx->input.key_count);
 	
 	/* initialize everything */
 	ctx->input.raw_keymap = xcalloc(ctx->input.key_count, sizeof(*ctx->input.raw_keymap));
 	offset = 0;
-	fprintf(stderr, "Initial raw key offset: %d", offset);
+	LOG(stderr, "Initial raw key offset: %d", offset);
 	for (i = 0; i < ctx->input.key_count; ++i) {
 		ctx->input.raw_keymap[i] = i + offset;
 	}
@@ -92,7 +92,7 @@ static void load_id_keymap(struct wlContext *ctx)
 	}
 	/* start with the known synergy maximum */
 	ctx->input.id_count = 0xF000;
-	fprintf(stderr, "max key: %zu", ctx->input.id_count);
+	LOG(stderr, "max key: %zu", ctx->input.id_count);
 	
 	/* initialize everything */
 	ctx->input.id_keymap = xcalloc(ctx->input.id_count, sizeof(*ctx->input.id_keymap));
@@ -118,7 +118,7 @@ int wlKeySetConfigLayout(struct wlContext *ctx)
 	}
 
 	char *default_map = ctx->kb_map;
-	fprintf(stderr, "Will default to map %s", default_map);
+	LOG(stderr, "Will default to map %s", default_map);
 	char *keymap_str = default_map ? xstrdup(default_map) : NULL;
 	local_mod_init(ctx, keymap_str);
 	ret = !ctx->input.key_map(&ctx->input, keymap_str);
@@ -136,7 +136,7 @@ void wlKeyRaw(struct wlContext *ctx, int key, int state)
 
 	/* keep track of raw keystate size */
 	if (key >= ctx->input.key_press_state_len) {
-		fprintf(stderr, "Resizing key press state array from %zu to %zu", ctx->input.key_press_state_len, key + 1);
+		LOG(stderr, "Resizing key press state array from %zu to %zu", ctx->input.key_press_state_len, key + 1);
 		ctx->input.key_press_state = xreallocarray (ctx->input.key_press_state, key + 1, sizeof(*ctx->input.key_press_state));
 		for (i = ctx->input.key_press_state_len; i < (key + 1); ++i) {
 			ctx->input.key_press_state[i] = 0;
@@ -145,22 +145,22 @@ void wlKeyRaw(struct wlContext *ctx, int key, int state)
 	}
 
 	if (!ctx->input.key_press_state[key] && !state) {
-		fprintf(stderr, "Superfluous release of raw key %d", key);
+		LOG(stderr, "Superfluous release of raw key %d", key);
 		return;
 	}
 
 	if (key > xkb_keymap_max_keycode(ctx->input.xkb_map)) {
-		fprintf(stderr, "keycode greater than xkb maximum, mod not tracked");
+		LOG(stderr, "keycode greater than xkb maximum, mod not tracked");
 	} else {
 		xkb_state_update_key(ctx->input.xkb_state, key, state);
 		xkb_mod_mask_t depressed = xkb_state_serialize_mods(ctx->input.xkb_state, XKB_STATE_MODS_DEPRESSED);
 		xkb_mod_mask_t latched = xkb_state_serialize_mods(ctx->input.xkb_state, XKB_STATE_MODS_LATCHED);
 		xkb_mod_mask_t locked = xkb_state_serialize_mods(ctx->input.xkb_state, XKB_STATE_MODS_LOCKED);
 		xkb_layout_index_t group = xkb_state_serialize_layout(ctx->input.xkb_state, XKB_STATE_LAYOUT_EFFECTIVE);
-		fprintf(stderr, "Modifiers: depressed: %x latched: %x locked: %x group: %x", depressed, latched, locked, group);
+		LOG(stderr, "Modifiers: depressed: %x latched: %x locked: %x group: %x", depressed, latched, locked, group);
 	}
 
-	fprintf(stderr, "Keycode: %d, state %d", key, state);
+	LOG(stderr, "Keycode: %d, state %d", key, state);
 	ctx->input.key_press_state[key] += state ? 1 : -1;
 	ctx->input.key(&ctx->input, key, state);
 }
@@ -172,19 +172,19 @@ void wlKey(struct wlContext *ctx, int key, int id, int state)
 
 	if ((id < ctx->input.id_count) && ctx->input.id_keymap_valid[id]) {
 		key = ctx->input.id_keymap[id];
-		fprintf(stderr, "Key %d remapped to %d by id %d", oldkey, key, id);
+		LOG(stderr, "Key %d remapped to %d by id %d", oldkey, key, id);
 	} else {
 		if (key >= ctx->input.key_count) {
-			fprintf(stderr, "Key %d outside configured keymap, dropping", key);
+			LOG(stderr, "Key %d outside configured keymap, dropping", key);
 			return;
 		}
 		key = ctx->input.raw_keymap[key];
 		if (key != oldkey) {
-			fprintf(stderr, "Key %d remapped to %d", oldkey, key);
+			LOG(stderr, "Key %d remapped to %d", oldkey, key);
 		}
 	}
 	if (key == -1) {
-		fprintf(stderr, "Dropping key mapped to -1");
+		LOG(stderr, "Dropping key mapped to -1");
 		return;
 	}
 	wlKeyRaw(ctx, key, state);
@@ -195,7 +195,7 @@ void wlKeyReleaseAll(struct wlContext *ctx)
 	size_t i;
 	for (i = 0; i < ctx->input.key_press_state_len; ++i) {
 		while (ctx->input.key_press_state[i]) {
-			fprintf(stderr, "Release all: key %zd, pressed %d times", i, ctx->input.key_press_state[i]);
+			LOG(stderr, "Release all: key %zd, pressed %d times", i, ctx->input.key_press_state[i]);
 			wlKeyRaw(ctx, i, 0);
 		}
 	}
@@ -213,10 +213,10 @@ void wlMouseMotion(struct wlContext *ctx, int x, int y)
 void wlMouseButton(struct wlContext *ctx, int button, int state)
 {
 	if (button >= WL_INPUT_BUTTON_COUNT) {
-		fprintf(stderr, "Mouse button %d exceeds maximum %d, dropping", button, WL_INPUT_BUTTON_COUNT);
+		LOG(stderr, "Mouse button %d exceeds maximum %d, dropping", button, WL_INPUT_BUTTON_COUNT);
 		return;
 	}
-	fprintf(stderr, "Mouse button: %d (mapped to %d), state: %d", button, ctx->input.button_map[button], state);
+	LOG(stderr, "Mouse button: %d (mapped to %d), state: %d", button, ctx->input.button_map[button], state);
 	ctx->input.mouse_button(&ctx->input, ctx->input.button_map[button], state);
 }
 void wlMouseWheel(struct wlContext *ctx, signed short dx, signed short dy)

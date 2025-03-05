@@ -14,7 +14,7 @@
 #if !defined(UINPUT_VERSION) || (UINPUT_VERSION < 5)
 bool wlInputInitUinput(struct wlContext *ctx)
 {
-	fprintf(stderr, "uinput unavailable or too old on this platform");
+	LOG(stderr, "uinput unavailable or too old on this platform");
 	return false;
 }
 #else
@@ -34,7 +34,7 @@ static void emit(int fd, int type, int code, int val)
 		.value = val,
 	};
 	if (!write_full(fd, &ie, sizeof(ie), 0)) {
-		fprintf(stderr, "could not send uinput event");
+		LOG(stderr, "could not send uinput event");
 	}
 }
 
@@ -86,7 +86,7 @@ static void key(struct wlInput *input, int code, int state)
 
 	code -= 8;
 	if (code > UINPUT_KEY_MAX) {
-		fprintf(stderr, "Keycode %d is unsupported by uinput (max %d), dropping", code, UINPUT_KEY_MAX);
+		LOG(stderr, "Keycode %d is unsupported by uinput (max %d), dropping", code, UINPUT_KEY_MAX);
 		return;
 	}
 
@@ -95,14 +95,14 @@ static void key(struct wlInput *input, int code, int state)
 }
 static bool key_map(struct wlInput *input, char *map)
 {
-	fprintf(stderr, "uinput does not support xkb keymaps -- use raw-keymap instead");
+	LOG(stderr, "uinput does not support xkb keymaps -- use raw-keymap instead");
 	return true;
 }
 
 #define TRY_IOCTL(fd, req, ...) \
        	do { \
 		if (ioctl(fd, req, __VA_ARGS__) == -1) { \
-			fprintf(stderr, "ioctl " #req " failed"); \
+			LOG(stderr, "ioctl " #req " failed"); \
 			return false; \
 		} \
 	} while (0)
@@ -110,7 +110,7 @@ static bool key_map(struct wlInput *input, char *map)
 #define TRY_IOCTL0(fd, req) \
        	do { \
 		if (ioctl(fd, req) == -1) { \
-			fprintf(stderr, "ioctl " #req " failed"); \
+			LOG(stderr, "ioctl " #req " failed"); \
 			return false; \
 		} \
 	} while (0)
@@ -194,9 +194,9 @@ static bool reinit_mouse(struct wlInput *input)
 
 static void update_geom(struct wlInput *input)
 {
-	fprintf(stderr, "uinput: updating geometry for mouse");
+	LOG(stderr, "uinput: updating geometry for mouse");
 	if (!reinit_mouse(input)) {
-		fprintf(stderr, "Could not reinitialize uinput for mouse");
+		LOG(stderr, "Could not reinitialize uinput for mouse");
 	}
 }
 
@@ -205,7 +205,7 @@ bool wlInputInitUinput(struct wlContext *ctx)
 	struct state_uinput *ui;
 
 	if (ctx->uinput_fd[0] == -1 || ctx->uinput_fd[1] == -1) {
-		fprintf(stderr, "Invalid uinput fds");
+		LOG(stderr, "Invalid uinput fds");
 		return false;
 	}
 
@@ -236,7 +236,7 @@ bool wlInputInitUinput(struct wlContext *ctx)
 	if (!init_mouse(ctx, ui, ctx->width, ctx->height))
 		goto error;
 
-	fprintf(stderr, "Using uinput");
+	LOG(stderr, "Using uinput");
 	return true;
 error:
 	if (ui->key_fd != -1)

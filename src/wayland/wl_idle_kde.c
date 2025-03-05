@@ -12,7 +12,7 @@ struct kde_state {
 static void on_idle_mouse(void *data, struct org_kde_kwin_idle_timeout *timeout)
 {
 	struct wlIdle *idle = data;
-	fprintf(stderr, "Got idle event, responding with zero mouse move");
+	LOG(stderr, "Got idle event, responding with zero mouse move");
 	wlMouseRelativeMotion(idle->wl_ctx, 0, 0);
 }
 static void on_idle_key(void *data, struct org_kde_kwin_idle_timeout *timeout)
@@ -20,7 +20,7 @@ static void on_idle_key(void *data, struct org_kde_kwin_idle_timeout *timeout)
 	struct wlIdle *idle = data;
 	struct kde_state *kde = idle->state;
 	//Second try at this -- press a key we do not care about
-	fprintf(stderr, "Got idle event, responding with keypress");
+	LOG(stderr, "Got idle event, responding with keypress");
 	if (kde->key_raw != -1) {
 		wlKeyRaw(idle->wl_ctx, kde->key_raw, true);
 		wlKeyRaw(idle->wl_ctx, kde->key_raw, false);
@@ -31,7 +31,7 @@ static void on_idle_key(void *data, struct org_kde_kwin_idle_timeout *timeout)
 }
 static void on_resumed(void *data, struct org_kde_kwin_idle_timeout *timeout)
 {
-	fprintf(stderr, "Got resume event");
+	LOG(stderr, "Got resume event");
 }
 
 static void inhibit_start(struct wlIdle *idle)
@@ -40,7 +40,7 @@ static void inhibit_start(struct wlIdle *idle)
 
 	kde->timeout = org_kde_kwin_idle_get_idle_timeout(idle->wl_ctx->idle_manager, idle->wl_ctx->seat, kde->idle_time * 1000);
 	if (!kde->timeout) {
-		fprintf(stderr, "Could not get idle timeout");
+		LOG(stderr, "Could not get idle timeout");
 		return;
 	}
 	org_kde_kwin_idle_timeout_add_listener(kde->timeout, &kde->listener, idle);
@@ -52,7 +52,7 @@ static void inhibit_stop(struct wlIdle *idle)
 	struct kde_state *kde = idle->state;
 
 	if (!kde->timeout) {
-		fprintf(stderr, "Idle already not inhibited");
+		LOG(stderr, "Idle already not inhibited");
 		return;
 	}
 	org_kde_kwin_idle_timeout_release(kde->timeout);
@@ -66,7 +66,7 @@ bool wlIdleInitKde(struct wlContext *ctx)
 	char *idle_keyname;
 
 	if (!ctx->idle_manager) {
-		fprintf(stderr, "KDE idle inhibit selected, but no idle manager support");
+		LOG(stderr, "KDE idle inhibit selected, but no idle manager support");
 		return false;
 	}
 	struct kde_state *kde = xcalloc(1, sizeof(*kde));
@@ -86,7 +86,7 @@ bool wlIdleInitKde(struct wlContext *ctx)
 		kde->key = xkb_keymap_key_by_name(ctx->input.xkb_map, idle_keyname);
 		free(idle_keyname);
 	} else {
-		fprintf(stderr, "Unknown idle inhibition method %s, initialization failed", idle_method);
+		LOG(stderr, "Unknown idle inhibition method %s, initialization failed", idle_method);
 		free(idle_method);
 		free(kde);
 		return false;

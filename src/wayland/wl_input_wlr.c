@@ -16,7 +16,7 @@ struct state_wlr {
 /* create a layout file descriptor */
 static bool key_map(struct wlInput *input, char *keymap_str)
 {
-	fprintf(stderr, "Setting virtual keymap");
+	LOG(stderr, "Setting virtual keymap");
 	struct state_wlr *wlr = input->state;
 	int fd;
 	if ((fd = osGetAnonFd()) == -1) {
@@ -100,7 +100,7 @@ bool wlInputInitWlr(struct wlContext *ctx)
 	 * just in case */
 	wheel_mult_default = 1;
 	wlr->wheel_mult = 1; // Default 1
-	fprintf(stderr, "Using wheel_mult value of %d", wlr->wheel_mult);
+	LOG(stderr, "Using wheel_mult value of %d", wlr->wheel_mult);
 	ctx->input = (struct wlInput) {
 		.state = wlr,
 		.wl_ctx = ctx,
@@ -112,7 +112,7 @@ bool wlInputInitWlr(struct wlContext *ctx)
 		.key_map = key_map,
 	};
 	wlLoadButtonMap(ctx);
-	fprintf(stderr, "Using wlroots virtual input protocols");
+	LOG(stderr, "Using wlroots virtual input protocols");
 	return true;
 }
 

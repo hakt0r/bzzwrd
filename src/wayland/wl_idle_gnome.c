@@ -10,10 +10,10 @@ static void inhibit_stop(struct wlIdle *idle)
 {
 	pid_t *inhibitor = idle->state;
         if (*inhibitor == -1) {
-                fprintf(stderr, "gnome-session-inhibit not running");
+                LOG(stderr, "gnome-session-inhibit not running");
                 return;
         }
-        fprintf(stderr, "Stopping gnome-session-inhibit");
+        LOG(stderr, "Stopping gnome-session-inhibit");
         kill(*inhibitor, SIGTERM);
 	*inhibitor = -1;
 }
@@ -32,17 +32,17 @@ static void inhibit_start(struct wlIdle *idle)
                 inhibit_stop(idle);
         }
 
-        fprintf(stderr, "Starting gnome-session-inhibit");
+        LOG(stderr, "Starting gnome-session-inhibit");
         if (posix_spawnp(inhibitor, argv[0], NULL, NULL, argv, environ)) {
                 *inhibitor = -1;
-                fprintf(stderr, "Could not spawn gnome-session-inhibit");
+                LOG(stderr, "Could not spawn gnome-session-inhibit");
         }
 }
 
 bool wlIdleInitGnome(struct wlContext *ctx)
 {
 	if (strcmp(ctx->comp_name, "gnome-shell")) {
-		fprintf(stderr, "gnome inhibitor only works with 'gnome-shell', we have '%s'", ctx->comp_name);
+		LOG(stderr, "gnome inhibitor only works with 'gnome-shell', we have '%s'", ctx->comp_name);
 		return false;
 	}
 	pid_t *inhibitor = xmalloc(sizeof(*inhibitor));

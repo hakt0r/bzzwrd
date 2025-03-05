@@ -1,6 +1,8 @@
 import { cc } from 'bun:ffi';
 import { DisplayServer } from '../display.js';
 
+const DEBUG = process.env.DEBUG ? { __DEBUG__: '1' } : {};
+
 const { symbols } = cc({
   source: [
     './src/wayland/wl_idle.c',
@@ -32,6 +34,7 @@ const { symbols } = cc({
     '/usr/lib/gcc/x86_64-linux-gnu/13/include',
   ],
   define: {
+    ...DEBUG,
     __USE_GNU: '1',
     _GNU_SOURCE: '1',
   },

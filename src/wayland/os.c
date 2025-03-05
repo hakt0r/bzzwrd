@@ -12,6 +12,7 @@
 #include <sys/un.h>
 #include "ssb.h"
 #include "xmem.h"
+#include "wayland.h"
 
 #ifdef __FreeBSD__
 #include <sys/param.h>
@@ -25,7 +26,7 @@ bool osFileExists(const char *path)
 		return false;
 	}
 	if (!S_ISREG(buf.st_mode)) {
-		fprintf(stderr, "%s is not a regular file as expected", path);
+		LOG(stderr, "%s is not a regular file as expected", path);
 		return false;
 	}
 	return true;
@@ -98,7 +99,7 @@ void osDropPriv(void)
 	old_gid = getegid();
 
 	if (!old_uid) {
-		fprintf(stderr, "Running as root, dropping ancillary groups\n");
+		LOG(stderr, "Running as root, dropping ancillary groups\n");
 		if (setgroups(1, &new_gid)) {
 			/* if we're privileged we have not initialized the
 			 * log yet */
@@ -109,14 +110,14 @@ void osDropPriv(void)
 	/* POSIX calls this permanent, and it seems to be the case on the BSDs
 	 * and Linux. */
 	if (new_gid != old_gid) {
-		fprintf(stderr, "Dropping gid from %d to %d\n", old_gid, new_gid);
+		LOG(stderr, "Dropping gid from %d to %d\n", old_gid, new_gid);
 		if (setregid(new_gid, new_gid)) {
 			perror("Could not set group IDs");
 			abort();
 		}
 	}
 	if (new_uid != old_uid) {
-		fprintf(stderr, "Dropping uid from %d to %d\n", old_uid, new_uid);
+		LOG(stderr, "Dropping uid from %d to %d\n", old_uid, new_uid);
 		if (setreuid(new_uid, new_uid)) {
 			perror("Could not set user IDs");
 			abort();
@@ -136,17 +137,17 @@ char *osGetPeerProcName(int fd)
 	struct ssb s = {0};
 
 	if (getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &uc, &len) == -1) {
-		fprintf(stderr, "GetPeerProcName: getsockopt() failure");
+		LOG(stderr, "GetPeerProcName: getsockopt() failure");
 		return NULL;
 	}
 
 	xasprintf(&path, "/proc/%d/comm", uc.pid);
 	if (!(f = fopen(path, "r"))) {
-		fprintf(stderr, "Could not open file");
+		LOG(stderr, "Could not open file");
 		goto done;
 	}
 	if (!ssb_readfile(&s, f)) {
-		fprintf(stderr, "Could not read process name");
+		LOG(stderr, "Could not read process name");
 		ssb_free(&s);
 		goto done;
 	}
@@ -177,26 +178,26 @@ char *osGetPeerProcName(int fd)
 	int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID};
 
 	if (getsockopt(fd, SOL_LOCAL, LOCAL_PEERCRED, &cred, &slen) == -1) {
-		fprintf(stderr, "GetPeerProcName: getsockopt() failure");
+		LOG(stderr, "GetPeerProcName: getsockopt() failure");
 		goto done;
 	}
-	fprintf(stderr, "Got peer pid of %d", cred.cr_pid);
+	LOG(stderr, "Got peer pid of %d", cred.cr_pid);
 
 	mib[3] = cred.cr_pid;
 	if (sysctl(mib, nitems(mib), NULL, &len, NULL, 0) == -1) {
-		fprintf(stderr, "sysctl failed to get size");
+		LOG(stderr, "sysctl failed to get size");
 		goto done;
 	}
 	kip = xmalloc(len);
 
 	if (sysctl(mib, nitems(mib), kip, &len, NULL, 0) == -1) {
-		fprintf(stderr, "sysctl failed to get proc info");
+		LOG(stderr, "sysctl failed to get proc info");
 		goto done;
 	}
 	if ((len != sizeof(*kip)) ||
 	    (kip->ki_structsize != sizeof(*kip)) ||
 	    (kip->ki_pid != cred.cr_pid)) {
-		fprintf(stderr, "returned procinfo is unusable");
+		LOG(stderr, "returned procinfo is unusable");
 		goto done;
 	}
 	name = xstrdup(kip->ki_comm);
@@ -208,7 +209,7 @@ done:
 #else
 char *osGetPeerProcName(int fd)
 {
-	fprintf(stderr, "osGetPeerProcName not implemented for this platform");
+	LOG(stderr, "osGetPeerProcName not implemented for this platform");
 	return NULL;
 }
 #endif

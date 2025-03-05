@@ -17,6 +17,12 @@
 #include "idle-client-protocol.h"
 #include "ext-idle-notify-v1-client-protocol.h"
 
+#ifdef __DEBUG__
+#define LOG(file, fmt, ...) fprintf(file, fmt, ##__VA_ARGS__)
+#else
+#define LOG(file, fmt, ...)
+#endif
+
 struct wlOutput
 {
 	uint32_t wl_name;

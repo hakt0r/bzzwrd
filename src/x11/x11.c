@@ -8,6 +8,12 @@
 #include <X11/extensions/XTest.h>
 #include <X11/extensions/dpms.h>
 
+#ifdef __DEBUG__
+#define LOG(file, fmt, ...) fprintf(file, fmt, ##__VA_ARGS__)
+#else
+#define LOG(file, fmt, ...)
+#endif
+
 typedef Display *(*XOpenDisplayFunc)(const char *);
 typedef Window (*XDefaultRootWindowFunc)(Display *);
 typedef int (*XCloseDisplayFunc)(Display *);
@@ -66,14 +72,14 @@ static int ensure_x11()
     x11_handle = dlopen("libX11.so.6", RTLD_LAZY);
     if (!x11_handle)
     {
-        fprintf(stderr, "Failed to load X11: %s\n", dlerror());
+        LOG(stderr, "Failed to load X11: %s\n", dlerror());
         return -1;
     }
 
     xfixes_handle = dlopen("libXfixes.so.3", RTLD_LAZY);
     if (!xfixes_handle)
     {
-        fprintf(stderr, "Failed to load Xfixes: %s\n", dlerror());
+        LOG(stderr, "Failed to load Xfixes: %s\n", dlerror());
         dlclose(x11_handle);
         return -1;
     }
@@ -81,7 +87,7 @@ static int ensure_x11()
     xtest_handle = dlopen("libXtst.so.6", RTLD_LAZY);
     if (!xtest_handle)
     {
-        fprintf(stderr, "Failed to load XTest: %s\n", dlerror());
+        LOG(stderr, "Failed to load XTest: %s\n", dlerror());
         dlclose(xfixes_handle);
         dlclose(x11_handle);
         return -1;
@@ -90,8 +96,8 @@ static int ensure_x11()
     dpms_handle = dlopen("libXext.so.6", RTLD_LAZY);
     if (!dpms_handle)
     {
-        fprintf(stderr, "Warning: Failed to load Xext: %s\n", dlerror());
-        fprintf(stderr, "DPMS functionality will be disabled\n");
+        LOG(stderr, "Warning: Failed to load Xext: %s\n", dlerror());
+        LOG(stderr, "DPMS functionality will be disabled\n");
         dpms_available = False;
     }
     else
@@ -133,7 +139,7 @@ static int ensure_x11()
         !xTestFakeMotionEvent || !xTestFakeRelativeMotionEvent ||
         !xTestFakeButtonEvent || !xTestFakeKeyEvent)
     {
-        fprintf(stderr, "Failed to load essential X11 functions: %s\n", dlerror());
+        LOG(stderr, "Failed to load essential X11 functions: %s\n", dlerror());
         if (dpms_handle)
             dlclose(dpms_handle);
         dlclose(xtest_handle);
@@ -144,18 +150,18 @@ static int ensure_x11()
 
     if (!xfixes_available)
     {
-        fprintf(stderr, "Warning: XFixes extension not available. Cursor hiding will be disabled.\n");
+        LOG(stderr, "Warning: XFixes extension not available. Cursor hiding will be disabled.\n");
     }
 
     if (!dpms_available)
     {
-        fprintf(stderr, "Warning: DPMS extension not available. Idle inhibition will be disabled.\n");
+        LOG(stderr, "Warning: DPMS extension not available. Idle inhibition will be disabled.\n");
     }
 
     display = xOpenDisplay(NULL);
     if (!display)
     {
-        fprintf(stderr, "Failed to connect to X server\n");
+        LOG(stderr, "Failed to connect to X server\n");
         if (dpms_handle)
             dlclose(dpms_handle);
         dlclose(xtest_handle);
@@ -175,7 +181,7 @@ __attribute__((export_name("x11_hide_cursor"))) int x11_hide_cursor()
         return -1;
     if (!xfixes_available)
     {
-        fprintf(stderr, "XFixes extension not available, cursor hiding not supported\n");
+        LOG(stderr, "XFixes extension not available, cursor hiding not supported\n");
         return 0;
     }
     xFixesHideCursor(display, root);
@@ -189,7 +195,7 @@ __attribute__((export_name("x11_show_cursor"))) int x11_show_cursor()
         return -1;
     if (!xfixes_available)
     {
-        fprintf(stderr, "XFixes extension not available, cursor showing not supported\n");
+        LOG(stderr, "XFixes extension not available, cursor showing not supported\n");
         return 0;
     }
     xFixesShowCursor(display, root);
@@ -209,7 +215,7 @@ __attribute__((export_name("x11_lock_input"))) int x11_lock_input()
 
     if (result != GrabSuccess)
     {
-        fprintf(stderr, "Warning: Failed to grab pointer (this is normal in Xvfb)\n");
+        LOG(stderr, "Warning: Failed to grab pointer (this is normal in Xvfb)\n");
     }
 
     result = xGrabKeyboard(display, root, True,
@@ -217,7 +223,7 @@ __attribute__((export_name("x11_lock_input"))) int x11_lock_input()
 
     if (result != GrabSuccess)
     {
-        fprintf(stderr, "Warning: Failed to grab keyboard (this is normal in Xvfb)\n");
+        LOG(stderr, "Warning: Failed to grab keyboard (this is normal in Xvfb)\n");
         xUngrabPointer(display, CurrentTime);
     }
 
@@ -357,7 +363,7 @@ __attribute__((export_name("x11_idle_inhibit"))) int x11_idle_inhibit(int inhibi
 
     if (!dpms_available)
     {
-        fprintf(stderr, "DPMS extension not available, idle inhibition not supported\n");
+        LOG(stderr, "DPMS extension not available, idle inhibition not supported\n");
         return 0;
     }
 

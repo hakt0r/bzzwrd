@@ -140,16 +140,16 @@ SHL_UNUSED static inline void sopt_usage_printopt(struct sopt *opt)
 		return; /*borked, yo*/
 	}
 	if (shortopt) {
-		fprintf(stderr, "-%c", opt->val);
+		LOG(stderr, "-%c", opt->val);
 	}
 	if (shortopt && longopt) {
-		fprintf(stderr, "|");
+		LOG(stderr, "|");
 	}
 	if (longopt) {
-		fprintf(stderr, "--%s", opt->name);
+		LOG(stderr, "--%s", opt->name);
 	}
 	if (opt->arg) {
-		fprintf(stderr, " %s", opt->arg);
+		LOG(stderr, " %s", opt->arg);
 	}
 }
 /*print out usage message
@@ -168,40 +168,40 @@ SHL_UNUSED static void sopt_usage(struct sopt *optspec, const char *name, const 
 	if (!(name && desc && optspec))
 		return;
 
-	fprintf(stderr, "%s: %s\n\nUSAGE: %s", name, desc, name);
+	LOG(stderr, "%s: %s\n\nUSAGE: %s", name, desc, name);
 	for (opt = optspec; SOPT_VALID(opt); ++opt) {
 		if (opt->val == SOPT_AFTER) {
 			afteropt = true;
 			continue;
 		}
-		fprintf(stderr, " [");
+		LOG(stderr, " [");
 		sopt_usage_printopt(opt);
-		fprintf(stderr, "]");
+		LOG(stderr, "]");
 	}
 	if (afteropt) {
-		fprintf(stderr, " --");
+		LOG(stderr, " --");
 		for (opt = optspec; SOPT_VALID(opt); ++opt) {
 			if (opt->val == SOPT_AFTER)
-				fprintf(stderr, " %s", opt->arg);
+				LOG(stderr, " %s", opt->arg);
 		}
 	}
-	fprintf(stderr, "\n\t");
+	LOG(stderr, "\n\t");
 
 	/* now we get to the descriptions */
 	for (opt = optspec; SOPT_VALID(opt); ++opt) {
 		if (opt->val == SOPT_AFTER)
 			continue;
 		sopt_usage_printopt(opt);
-		fprintf(stderr, ":\n\t\t%s\n\t", opt->desc);
+		LOG(stderr, ":\n\t\t%s\n\t", opt->desc);
 	}
 	if (afteropt) {
 		for (opt = optspec; SOPT_VALID(opt); ++opt) {
 			if (opt->val == SOPT_AFTER)
-				fprintf(stderr, "%s:\n\t\t%s\n\t", opt->arg, opt->desc);
+				LOG(stderr, "%s:\n\t\t%s\n\t", opt->arg, opt->desc);
 		}
 	}
 	/*make it prettier*/
-	fprintf(stderr, "\n");
+	LOG(stderr, "\n");
 }
 /*print out usage message, but with static storage of parameters.
  * If 'set' is true, other parameters are stored, and the function returns.
@@ -276,17 +276,17 @@ SHL_UNUSED static bool sopt_argconv_ldbl(const char *s, long double *out)
 
 SHL_UNUSED static void sopt_perror(struct sopt *opt, const char *msg)
 {
-	fprintf(stderr, "Error parsing argument ");
+	LOG(stderr, "Error parsing argument ");
 	if (isalnum(opt->val)) {
-		fprintf(stderr, "-%c", opt->val);
+		LOG(stderr, "-%c", opt->val);
 		if (opt->name) {
-			fprintf(stderr, "/");
+			LOG(stderr, "/");
 		}
 	}
 	if (opt->name) {
-		fprintf(stderr, "--%s", opt->name);
+		LOG(stderr, "--%s", opt->name);
 	}
-	fprintf(stderr, ": %s\n", msg);
+	LOG(stderr, ": %s\n", msg);
 }
 
 /* replacement for getopt()

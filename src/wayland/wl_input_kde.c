@@ -5,7 +5,7 @@
 static bool key_map(struct wlInput *input, char *keymap_str)
 {
 	/* XXX: this is blatantly inadequate */
-	fprintf(stderr, "KDE does not support xkb keymaps -- use raw-keymap instead\n");
+	LOG(stderr, "KDE does not support xkb keymaps -- use raw-keymap instead\n");
 	return true;
 }
 
@@ -54,9 +54,9 @@ static void mouse_wheel(struct wlInput *input, signed short dx, signed short dy)
 
 bool wlInputInitKde(struct wlContext *ctx)
 {
-	fprintf(stderr, "Trying KDE fake input protocol for input\n");
+	LOG(stderr, "Trying KDE fake input protocol for input\n");
 	if (!(ctx->fake_input)) {
-		fprintf(stderr, "KDE: Fake input not supported\n");
+		LOG(stderr, "KDE: Fake input not supported\n");
 		return false;
 	}
 	org_kde_kwin_fake_input_authenticate(ctx->fake_input, "bzzwrd", "control keyboard and mouse with Synergy/Barrier server");
@@ -71,7 +71,7 @@ bool wlInputInitKde(struct wlContext *ctx)
 		.key_map = key_map,
 	};
 	wlLoadButtonMap(ctx);
-	fprintf(stderr, "Using KDE fake input protocol\n");
+	LOG(stderr, "Using KDE fake input protocol\n");
 	return true;
 }
 
